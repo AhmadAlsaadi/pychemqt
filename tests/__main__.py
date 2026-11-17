@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>."""
 
 import os
 import warnings
-from unittest import TestSuite, TextTestRunner
+from unittest import TestLoader, TestSuite, TextTestRunner
 
 import numpy as np
 
@@ -42,6 +42,7 @@ os.environ["reportlab"] = "False"
 os.environ["Qsci"] = "False"
 
 from test_lib import TestLib
+from test_flash import TestFlash
 
 # Don't print the numpy RuntimeWarning
 np.seterr("ignore")
@@ -50,6 +51,7 @@ warnings.simplefilter("ignore")
 
 suite = TestSuite()
 suite.addTest(TestLib)
+suite.addTests(TestLoader().loadTestsFromTestCase(TestFlash))
 
 runner = TextTestRunner(failfast=False)
 results = runner.run(suite)

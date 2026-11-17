@@ -38,6 +38,7 @@ from equipment.parents import equipment
 from equipment.heatExchanger import Heat_Exchanger
 from lib import unidades
 from lib.corriente import Corriente
+from lib.mezcla import Mezcla
 from lib.plot import PlotDialog
 
 
@@ -48,6 +49,15 @@ class Flash(equipment):
         entrada: Corriente instance to define the input stream to equipment
         flash: Calculate method
             0 - Use temperature and pressure of input stream
+            1 - Specify outlet pressure and temperature
+            2 - Specify outlet pressure and vapor fraction
+            3 - Specify outlet pressure and heat duty
+            4 - Adiabatic flash at specified outlet pressure
+        Pout: Outlet pressure, [Pa]
+        DeltaP: Pressure drop, [Pa]
+        Tout: Outlet temperature, [K]
+        xout: Outlet vapor fraction, [-]
+        Q: Heat duty added to the stream, [W]
 
     Cost:
         orientacion:
@@ -85,6 +95,11 @@ class Flash(equipment):
     kwargs = {
         "entrada": None,
         "flash": 0,
+        "Pout": None,
+        "DeltaP": None,
+        "Tout": None,
+        "xout": None,
+        "Q": None,
 
         "f_install": 1.7,
         "Base_index": 0.0,
@@ -101,13 +116,19 @@ class Flash(equipment):
 
     kwargsInput = ("entrada", )
     kwargsList = ("flash", "orientacion", "material", "cabeza")
-    kwargsValue = ("diametro", "longitud", "espesor", "espesor_cabeza",
+    kwargsValue = ("Pout", "DeltaP", "Tout", "xout", "Q",
+                   "diametro", "longitud", "espesor", "espesor_cabeza",
                    "reborde")
+    calculateValue = ("Pout", "DeltaP", "Tout", "xout", "Q")
     calculateCostos = ("C_adq", "C_inst", "Peso", "Volumen")
     indiceCostos = 3
 
     TEXT_FLASH = [
-        translate("equipment", "Use P and T from input stream")]
+        translate("equipment", "Use P and T from input stream"),
+        translate("equipment", "Specify outlet pressure and temperature"),
+        translate("equipment", "Specify outlet pressure and vapor fraction"),
+        translate("equipment", "Specify outlet pressure and heat duty"),
+        translate("equipment", "Adiabatic flash at outlet pressure")]
     TEXT_ORIENTATION = [translate("equipment", "Horizontal"),
                         translate("equipment", "Vertical")]
     TEXT_MATERIAL = [
@@ -140,32 +161,200 @@ class Flash(equipment):
             self.status = 0
             return
 
+        mode = self.kwargs["flash"]
+        if mode not in range(5):
+            self.msg = translate("equipment", "undefined flash method")
+            self.status = 0
+            return
+        if mode == 1 and not self.kwargs["Tout"]:
+            self.msg = translate("equipment", "undefined outlet temperature")
+            self.status = 0
+            return
+        if mode == 2 and self.kwargs["xout"] is None:
+            self.msg = translate("equipment", "undefined vapor fraction")
+            self.status = 0
+            return
+        if mode == 3 and self.kwargs["Q"] is None:
+            self.msg = translate("equipment", "undefined heat duty")
+            self.status = 0
+            return
+
         self.msg = ""
         self.status = 1
         return True
 
+    def cleanOldValues(self, **kwargs):
+        """Clear mutually exclusive flash specifications"""
+        if kwargs.get("Pout"):
+            kwargs["DeltaP"] = None
+        elif kwargs.get("DeltaP"):
+            kwargs["Pout"] = None
+        super().cleanOldValues(**kwargs)
+
+    def _outlet_pressure(self):
+        """Return the specified outlet pressure"""
+        if self.kwargs["Pout"]:
+            return float(self.kwargs["Pout"])
+        if self.kwargs["DeltaP"]:
+            return float(self.entrada.P)-float(self.kwargs["DeltaP"])
+        return float(self.entrada.P)
+
+    def _phase_composition(self, stream, phase, use_phase):
+        """Return the composition of a phase or the overall composition"""
+        if use_phase:
+            mix = getattr(stream, phase, None)
+            fraction = getattr(mix, "fraccion", None)
+            if fraction:
+                return fraction
+        return stream.fraccion
+
+    def _phase_stream(self, stream, fraction, mass, saturated=False,
+                      quality=None):
+        """Create a phase stream from a flash result"""
+        if not mass:
+            out = stream.zeroFlow()
+            out.x = unidades.Dimensionless(0)
+            return out
+        if not saturated:
+            if abs(float(mass)-float(stream.caudalmasico)) < 1e-12:
+                return stream
+            return stream.clone(
+                fraccionMolar=fraction, caudalMasico=mass)
+        if len(stream.ids) == 1 and \
+                stream._thermo in ("iapws", "freesteam", "meos"):
+            try:
+                out = stream.clone(
+                    P=stream.P, x=quality, fraccionMolar=fraction,
+                    caudalMasico=mass)
+                if out.status:
+                    return out
+            except Exception:
+                pass
+        if len(stream.ids) > 1 and stream._thermo == "eos":
+            try:
+                mix = stream.Gas if quality else stream.Liquido
+                out = stream.clone()
+                out.x = unidades.Dimensionless(quality)
+                out.mezcla = mix
+                out.Gas = mix if quality else Mezcla()
+                out.Liquido = Mezcla() if quality else mix
+                out.ids = stream.ids
+                out.componente = stream.componente
+                out.fraccion = mix.fraccion
+                out.fraccion_masica = mix.fraccion_masica
+                out.caudalmasico = mix.caudalmasico
+                out.caudalmolar = mix.caudalmolar
+                out.caudalunitariomasico = mix.caudalunitariomasico
+                out.caudalunitariomolar = mix.caudalunitariomolar
+                out.Q = mix.Q
+                overall_x = float(stream.x)
+                out.h = unidades.Power(
+                    float(stream.h)*(overall_x if quality else 1-overall_x))
+                out.s = unidades.Entropy(0)
+                out.status = 1
+                return out
+            except Exception:
+                pass
+        try:
+            out = stream.clone(
+                T=stream.T, P=stream.P, x=None, fraccionMolar=fraction,
+                caudalMasico=mass)
+            if out.status:
+                return out
+        except Exception:
+            pass
+        return stream.zeroFlow()
+
+    def _split_feed(self):
+        """Separate the phases already present in the inlet stream"""
+        stream = self.entrada
+        x = float(stream.x)
+        vapor_mass = float(stream.caudalmasico)*x
+        liquid_mass = float(stream.caudalmasico)-vapor_mass
+        vapor_fraction = self._phase_composition(
+            stream, "Gas", 0 < x < 1)
+        liquid_fraction = self._phase_composition(
+            stream, "Liquido", 0 < x < 1)
+        saturated = 0 < x < 1
+        return (
+            self._phase_stream(
+                stream, vapor_fraction, vapor_mass, saturated, 1),
+            self._phase_stream(
+                stream, liquid_fraction, liquid_mass, saturated, 0))
+
+    def _flash_outputs(self, stream):
+        """Separate the result of a flash calculation into two phases"""
+        x = float(stream.x)
+        if x <= 0:
+            return stream.zeroFlow(), stream
+        if x >= 1:
+            return stream, stream.zeroFlow()
+        vapor_mass = stream.Gas.caudalmasico
+        liquid_mass = stream.Liquido.caudalmasico
+        return (
+            self._phase_stream(
+                stream, stream.Gas.fraccion, vapor_mass, True, 1),
+            self._phase_stream(
+                stream, stream.Liquido.fraccion, liquid_mass, True, 0))
+
     def calculo(self):
         self.entrada = self.kwargs["entrada"]
-        if self.kwargs["flash"] == 0:
-            Vapor = self.entrada.clone(
-                fraccionMolar=self.entrada.Gas.fraccion,
-                caudalMasico=self.entrada.Gas.caudalmasico)
-            Liquido = self.entrada.clone(
-                fraccionMolar=self.entrada.Liquido.fraccion,
-                caudalMasico=self.entrada.Liquido.caudalmasico)
+        try:
+            mode = self.kwargs["flash"]
+            if mode == 0:
+                Vapor, Liquido = self._split_feed()
+            else:
+                Pout = self._outlet_pressure()
+                kw = {}
+                if mode == 1:
+                    kw["T"] = float(self.kwargs["Tout"])
+                elif mode == 2:
+                    kw["x"] = float(self.kwargs["xout"])
+                elif mode == 3:
+                    kw["Q"] = float(self.kwargs["Q"])
+                elif mode == 4:
+                    kw["adiabatic"] = True
+                result = self.entrada.flash(P=Pout, **kw)
+                Vapor, Liquido = self._flash_outputs(result)
+
             self.salida = [Vapor, Liquido]
-        self.Tout = Vapor.T
-        self.Pout = Vapor.P
-        self.VaporMolarFlow = Vapor.caudalmolar
-        self.VaporMassFlow = Vapor.caudalmasico
-        self.VaporVolFlow = Vapor.Q
-        self.VaporMolarComposition = Vapor.fraccion
-        self.VaporMassComposition = Vapor.fraccion_masica
-        self.LiquidMolarFlow = Liquido.caudalmolar
-        self.LiquidMassFlow = Liquido.caudalmasico
-        self.LiquidVolFlow = Liquido.Q
-        self.LiquidMolarComposition = Liquido.fraccion
-        self.LiquidMassComposition = Liquido.fraccion_masica
+            self.Tout = Vapor.T
+            self.Pout = Vapor.P
+            self.DeltaP = unidades.DeltaP(
+                float(self.entrada.P)-float(Vapor.P))
+            self.xout = unidades.Dimensionless(
+                self.entrada.x if mode == 0 else result.x)
+            self.VaporMolarFlow = Vapor.caudalmolar
+            self.VaporMassFlow = Vapor.caudalmasico
+            self.VaporVolFlow = Vapor.Q
+            self.VaporMolarComposition = Vapor.fraccion
+            self.VaporMassComposition = Vapor.fraccion_masica
+            self.LiquidMolarFlow = Liquido.caudalmolar
+            self.LiquidMassFlow = Liquido.caudalmasico
+            self.LiquidVolFlow = Liquido.Q
+            self.LiquidMolarComposition = Liquido.fraccion
+            self.LiquidMassComposition = Liquido.fraccion_masica
+            self.Q = unidades.Power(
+                float(Vapor.h)+float(Liquido.h)-float(self.entrada.h))
+        except Exception as error:
+            self.status = 0
+            self.msg = str(error)
+            self.Tout = self.entrada.T
+            self.Pout = self.entrada.P
+            self.DeltaP = unidades.DeltaP(0)
+            self.xout = self.entrada.x
+            self.VaporMolarFlow = unidades.MolarFlow(0)
+            self.VaporMassFlow = unidades.MassFlow(0)
+            self.VaporVolFlow = unidades.VolFlow(0)
+            self.VaporMolarComposition = self.entrada.fraccion
+            self.VaporMassComposition = self.entrada.fraccion_masica
+            self.LiquidMolarFlow = unidades.MolarFlow(0)
+            self.LiquidMassFlow = unidades.MassFlow(0)
+            self.LiquidVolFlow = unidades.VolFlow(0)
+            self.LiquidMolarComposition = self.entrada.fraccion
+            self.LiquidMassComposition = self.entrada.fraccion_masica
+            self.Q = unidades.Power(0)
+            self.salida = [Corriente(), Corriente()]
 
     def volumen(self):
         self.Di = unidades.Length(0)
@@ -272,6 +461,8 @@ class Flash(equipment):
         txt += translate("equipment", "Liquid Output Molar Composition") + os.linesep
         for cmp, xi in zip(self.salida[1].componente, self.salida[1].fraccion):
             txt += "    %-21s\t %0.4f" % (cmp.nombre, xi) + os.linesep
+        txt += os.linesep
+        txt += self.propertiesToText(range(13, 14))
         return txt
 
     @classmethod
@@ -299,7 +490,8 @@ class Flash(equipment):
              (translate("equipment", "Liquid Output Molar Composition"),
               "LiquidMolarComposition", unidades.Dimensionless),
              (translate("equipment", "Liquid Output Mass Composition"),
-              "LiquidMassComposition", unidades.Dimensionless)]
+              "LiquidMassComposition", unidades.Dimensionless),
+             (translate("equipment", "Heat Duty"), "Q", unidades.Power)]
         return l
 
     def propertiesListTitle(self, index):
@@ -312,10 +504,12 @@ class Flash(equipment):
         state["Tout"] = self.Tout
         state["Pout"] = self.Pout
         state["VaporMolarFlow"] = self.VaporMolarFlow
+        state["VaporMassFlow"] = self.VaporMassFlow
         state["VaporVolFlow"] = self.VaporVolFlow
         state["VaporMolarComposition"] = self.VaporMolarComposition
         state["VaporMassComposition"] = self.VaporMassComposition
         state["LiquidMolarFlow"] = self.LiquidMolarFlow
+        state["LiquidMassFlow"] = self.LiquidMassFlow
         state["LiquidVolFlow"] = self.LiquidVolFlow
         state["LiquidMolarComposition"] = self.LiquidMolarComposition
         state["LiquidMassComposition"] = self.LiquidMassComposition
@@ -328,18 +522,26 @@ class Flash(equipment):
         """Load instance parameter from saved file"""
         self.Tout = unidades.Temperature(state["Tout"])
         self.Pout = unidades.Pressure(state["Pout"])
-        self.VaporMolarFlow = unidades.MassFlow(state["VaporMolarFlow"])
+        self.VaporMolarFlow = unidades.MolarFlow(state["VaporMolarFlow"])
+        self.VaporMassFlow = unidades.MassFlow(
+            state.get("VaporMassFlow", 0))
         self.VaporVolFlow = unidades.VolFlow(state["VaporVolFlow"])
         self.VaporMolarComposition = [
-            unidades.MolarFlow(p) for p in state["VaporMolarComposition"]]
+            unidades.Dimensionless(p)
+            for p in state["VaporMolarComposition"]]
         self.VaporMassComposition = [
-            unidades.MassFlow(p) for p in state["VaporMassComposition"]]
+            unidades.Dimensionless(p)
+            for p in state["VaporMassComposition"]]
         self.LiquidMolarFlow = unidades.MolarFlow(state["LiquidMolarFlow"])
+        self.LiquidMassFlow = unidades.MassFlow(
+            state.get("LiquidMassFlow", 0))
         self.LiquidVolFlow = unidades.VolFlow(state["LiquidVolFlow"])
         self.LiquidMolarComposition = [
-            unidades.MolarFlow(p) for p in state["LiquidMolarComposition"]]
+            unidades.Dimensionless(p)
+            for p in state["LiquidMolarComposition"]]
         self.LiquidMassComposition = [
-            unidades.MassFlow(p) for p in state["LiquidMassComposition"]]
+            unidades.Dimensionless(p)
+            for p in state["LiquidMassComposition"]]
 
         self.statusCoste = state["statusCoste"]
         if self.statusCoste:

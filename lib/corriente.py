@@ -30,6 +30,7 @@ import logging
 import os
 
 from scipy.constants import R
+from scipy.optimize import brentq
 from tools.qt import QtWidgets, translate
 
 from lib.physics import R_atml
@@ -228,11 +229,14 @@ class Corriente(config.Entity):
             self.kwargs["caudalUnitarioMolar"] = []
             self.kwargs["fraccionMasica"] = []
 
-        elif kwargs.get("x", None) and self.kwargs["T"] and self.kwargs["P"]:
+        elif kwargs.get("x", None) is not None and \
+                self.kwargs["T"] and self.kwargs["P"]:
             self.kwargs["T"] = 0.0
-        elif kwargs.get("T", 0.0) and self.kwargs["x"] and self.kwargs["P"]:
+        elif kwargs.get("T", 0.0) and \
+                self.kwargs["x"] is not None and self.kwargs["P"]:
             self.kwargs["P"] = 0.0
-        elif kwargs.get("P", 0.0) and self.kwargs["T"] and self.kwargs["x"]:
+        elif kwargs.get("P", 0.0) and self.kwargs["T"] and \
+                self.kwargs["x"] is not None:
             self.kwargs["x"] = None
 
         self.kwargs.update(kwargs)
@@ -284,9 +288,9 @@ class Corriente(config.Entity):
         self.tipoTermodinamica = ""
         if self.kwargs["T"] and self.kwargs["P"]:
             self.tipoTermodinamica = "TP"
-        elif self.kwargs["T"] and self.kwargs["x"]:
+        elif self.kwargs["T"] and self.kwargs["x"] is not None:
             self.tipoTermodinamica = "Tx"
-        elif self.kwargs["P"] and self.kwargs["x"]:
+        elif self.kwargs["P"] and self.kwargs["x"] is not None:
             self.tipoTermodinamica = "Px"
 
         # Mix definition
@@ -710,12 +714,206 @@ class Corriente(config.Entity):
             if self.kwargs["caudalMolar"]:
                 kwargs["caudalMolar"] = split*self.kwargs["caudalMolar"]
         if "x" in kwargs:
-            del old_kwargs["T"]
+            if kwargs["x"] is None:
+                old_kwargs["x"] = None
+            else:
+                del old_kwargs["T"]
         if "mezcla" in kwargs:
             old_kwargs.update(kwargs["mezcla"].kwargs)
             del kwargs["mezcla"]
         old_kwargs.update(kwargs)
         return Corriente(**old_kwargs)
+
+    def zeroFlow(self):
+        """Return a copy of the stream with zero flow and the same state"""
+        out = self.clone()
+        zero_mass = unidades.MassFlow(0)
+        zero_molar = unidades.MolarFlow(0)
+        zero_volume = unidades.VolFlow(0)
+        out.kwargs["caudalMasico"] = 0
+        out.kwargs["caudalMolar"] = 0
+        out.kwargs["caudalVolumetrico"] = 0
+        out.kwargs["caudalUnitarioMasico"] = []
+        out.kwargs["caudalUnitarioMolar"] = []
+        out.caudalmasico = zero_mass
+        out.caudalmolar = zero_molar
+        out.Q = zero_volume
+        out.h = unidades.Power(0)
+        out.s = unidades.Entropy(0)
+        out.caudalunitariomasico = [
+            unidades.MassFlow(0) for _ in out.caudalunitariomasico]
+        out.caudalunitariomolar = [
+            unidades.MolarFlow(0) for _ in out.caudalunitariomolar]
+        if out.mezcla:
+            out.mezcla.caudalmasico = zero_mass
+            out.mezcla.caudalmolar = zero_molar
+            out.mezcla.caudalunitariomasico = [
+                unidades.MassFlow(0) for _ in out.mezcla.caudalunitariomasico]
+            out.mezcla.caudalunitariomolar = [
+                unidades.MolarFlow(0) for _ in out.mezcla.caudalunitariomolar]
+        for phase in (getattr(out, "Liquido", None), getattr(out, "Gas", None)):
+            if phase is not None and hasattr(phase, "caudalmasico"):
+                phase.caudalmasico = zero_mass
+                phase.caudalmolar = zero_molar
+                phase.Q = zero_volume
+        return out
+
+    def flash(self, P=None, T=None, x=None, Q=None, adiabatic=False):
+        """Return a new stream at specified flash outlet conditions.
+
+        Parameters
+        ----------
+        P : float, optional
+            Outlet pressure, [Pa]. Defaults to the inlet pressure.
+        T : float, optional
+            Outlet temperature, [K]. Defines a P,T flash.
+        x : float, optional
+            Outlet vapor fraction, [-]. Defines a P,x flash.
+        Q : float, optional
+            Heat duty added to the stream, [W]. Defines a P,Q flash.
+        adiabatic : bool, optional
+            Use zero heat duty and solve for the outlet temperature.
+        """
+        Pout = float(self.P if P is None else P)
+        if T is not None:
+            out = self.clone(T=float(T), P=Pout)
+            if not out.status:
+                raise ValueError(
+                    translate("Corriente", "Flash calculation failed"))
+            return out
+        if x is not None:
+            xout = float(x)
+            if not 0 <= xout <= 1:
+                raise ValueError(
+                    translate("Corriente", "Vapor fraction out of range"))
+            if len(self.ids) == 1 and \
+                    self._thermo in ("iapws", "freesteam", "meos"):
+                out = self.clone(P=Pout, x=xout)
+            else:
+                out = self._flash_x(Pout, xout)
+            if not out.status:
+                raise ValueError(
+                    translate("Corriente", "Flash calculation failed"))
+            return out
+        if adiabatic:
+            Q = 0
+        if Q is None:
+            raise ValueError(
+                translate("Corriente", "Undefined flash specification"))
+        target = float(self.h)+float(Q)
+        return self._flash_enthalpy(Pout, target)
+
+    def _flash_enthalpy(self, P, target):
+        """Solve an isenthalpic or duty-specified flash at pressure P"""
+        h_liq = h_vap = T_sat = None
+        if len(self.ids) == 1 and \
+                self._thermo in ("iapws", "freesteam", "meos"):
+            try:
+                liq = self.clone(P=P, x=0)
+                vap = self.clone(P=P, x=1)
+                h_liq = float(liq.h)
+                h_vap = float(vap.h)
+                T_sat = float(liq.T)
+            except Exception:
+                pass
+
+        if h_liq is not None and h_vap is not None:
+            low = min(h_liq, h_vap)
+            high = max(h_liq, h_vap)
+            tol = max(1e-9, 1e-9*max(abs(low), abs(high), abs(target)))
+            if low-tol <= target <= high+tol:
+                if abs(h_vap-h_liq) > tol:
+                    x = (target-h_liq)/(h_vap-h_liq)
+                else:
+                    x = 0.0
+                out = self.clone(P=P, x=min(1.0, max(0.0, x)))
+                if out.status:
+                    return out
+
+        def enthalpy(T):
+            out = self.clone(T=float(T), P=P)
+            if not out.status:
+                raise ValueError(
+                    translate("Corriente", "Flash calculation failed"))
+            return float(out.h)-target
+
+        T0 = max(float(self.T), 1.0)
+        if T_sat is not None and h_liq is not None and h_vap is not None:
+            if target > max(h_liq, h_vap):
+                low = max(T0, T_sat+1e-6)
+            else:
+                low = min(T0, T_sat-1e-6)
+        else:
+            low = T0
+
+        f_low = enthalpy(low)
+        if abs(f_low) < 1e-8:
+            return self.clone(T=low, P=P)
+
+        low, high = self._bracket_temperature(enthalpy, low, f_low)
+        Tout = brentq(enthalpy, low, high)
+        out = self.clone(T=Tout, P=P)
+        if not out.status:
+            raise ValueError(
+                translate("Corriente", "Flash calculation failed"))
+        return out
+
+    def _bracket_temperature(self, function, T0, f0):
+        """Find a temperature bracket for a monotonically increasing function"""
+        Tmin, Tmax = 100.0, 5000.0
+        step = max(2.0, 0.05*T0)
+        if f0 < 0:
+            low, high = T0, min(Tmax, T0+step)
+            for _ in range(100):
+                try:
+                    f_high = function(high)
+                except Exception:
+                    f_high = None
+                if f_high is not None and f_high >= 0:
+                    return low, high
+                low = high
+                if high >= Tmax:
+                    break
+                high = min(Tmax, high+step)
+                step *= 1.2
+        else:
+            high, low = T0, max(Tmin, T0-step)
+            for _ in range(100):
+                try:
+                    f_low = function(low)
+                except Exception:
+                    f_low = None
+                if f_low is not None and f_low <= 0:
+                    return low, high
+                high = low
+                if low <= Tmin:
+                    break
+                low = max(Tmin, low-step)
+                step *= 1.2
+        raise ValueError(
+            translate("Corriente", "Flash calculation failed"))
+
+    def _flash_x(self, P, target):
+        """Solve a P,x flash by finding the temperature with that quality"""
+        def quality(T):
+            out = self.clone(T=float(T), P=P)
+            if not out.status:
+                raise ValueError(
+                    translate("Corriente", "Flash calculation failed"))
+            return float(out.x)-target
+
+        T0 = max(float(self.T), 1.0)
+        f0 = quality(T0)
+        if abs(f0) < 1e-9:
+            return self.clone(T=T0, P=P)
+
+        low, high = self._bracket_temperature(quality, T0, f0)
+        Tout = brentq(quality, low, high)
+        out = self.clone(T=Tout, P=P)
+        if not out.status:
+            raise ValueError(
+                translate("Corriente", "Flash calculation failed"))
+        return out
 
     def __repr__(self):
         """String representation of any instance"""

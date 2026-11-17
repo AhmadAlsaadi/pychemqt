@@ -28,7 +28,9 @@ from functools import partial
 
 from equipment.distillation import Flash
 from equipment.parents import UI_equip
-from lib.unidades import Length, Mass, Volume, Density, Currency
+from lib.unidades import (
+    Length, Mass, Volume, Density, Currency, Pressure, DeltaP, Temperature,
+    Power)
 from tools.qt import QtWidgets
 from tools.costIndex import CostData
 from UI.widgets import Entrada_con_unidades
@@ -50,12 +52,38 @@ class UI_equipment (UI_equip):
         self.flash = QtWidgets.QComboBox()
         for txt in self.Equipment.TEXT_FLASH:
             self.flash.addItem(txt)
-        self.flash.currentIndexChanged.connect(
-            partial(self.changeParams, "metodo"))
+        self.flash.currentIndexChanged.connect(self.flashChanged)
         lyt_Calc.addWidget(self.flash, 0, 2)
+
+        lyt_Calc.addWidget(QtWidgets.QLabel(self.tr("Outlet pressure")), 1, 1)
+        self.Pout = Entrada_con_unidades(Pressure)
+        self.Pout.valueChanged.connect(partial(self.changeParams, "Pout"))
+        lyt_Calc.addWidget(self.Pout, 1, 2)
+
+        lyt_Calc.addWidget(QtWidgets.QLabel(self.tr("Pressure drop")), 2, 1)
+        self.DeltaP = Entrada_con_unidades(DeltaP)
+        self.DeltaP.valueChanged.connect(partial(self.changeParams, "DeltaP"))
+        lyt_Calc.addWidget(self.DeltaP, 2, 2)
+
+        lyt_Calc.addWidget(QtWidgets.QLabel(self.tr("Outlet temperature")), 3, 1)
+        self.Tout = Entrada_con_unidades(Temperature)
+        self.Tout.valueChanged.connect(partial(self.changeParams, "Tout"))
+        lyt_Calc.addWidget(self.Tout, 3, 2)
+
+        lyt_Calc.addWidget(QtWidgets.QLabel(self.tr("Vapor fraction")), 4, 1)
+        self.xout = Entrada_con_unidades(float, min=0, max=1, decimales=4)
+        self.xout.valueChanged.connect(partial(self.changeParams, "xout"))
+        lyt_Calc.addWidget(self.xout, 4, 2)
+
+        lyt_Calc.addWidget(QtWidgets.QLabel(self.tr("Heat duty")), 5, 1)
+        self.Q = Entrada_con_unidades(Power)
+        self.Q.valueChanged.connect(partial(self.changeParams, "Q"))
+        lyt_Calc.addWidget(self.Q, 5, 2)
+
         lyt_Calc.addItem(QtWidgets.QSpacerItem(
             20, 20, QtWidgets.QSizePolicy.Policy.Expanding,
-            QtWidgets.QSizePolicy.Policy.Expanding), 1, 1, 1, 6)
+            QtWidgets.QSizePolicy.Policy.Expanding), 6, 1, 1, 6)
+        self.flashChanged(self.flash.currentIndex(), update=False)
 
         # Cost tab
         lyt_Cost = QtWidgets.QGridLayout(self.tabCostos)
@@ -150,11 +178,22 @@ class UI_equipment (UI_equip):
             QtWidgets.QSizePolicy.Policy.Expanding), 13, 0, 1, 6)
 
         # Output tab
-        self.addSalida(self.tr("Destilate"))
-        self.addSalida(self.tr("Residue"))
+        self.addSalida(self.tr("Vapor"))
+        self.addSalida(self.tr("Liquid"))
 
         if equipment:
             self.setEquipment(equipment)
+
+    def flashChanged(self, index, update=True):
+        """Enable only the specification fields used by the selected method"""
+        pressure = index in (1, 2, 3, 4)
+        self.Pout.setEnabled(pressure)
+        self.DeltaP.setEnabled(pressure)
+        self.Tout.setEnabled(index == 1)
+        self.xout.setEnabled(index == 2)
+        self.Q.setEnabled(index == 3)
+        if update:
+            self.changeParams("flash", index)
 
 
 if __name__ == "__main__":

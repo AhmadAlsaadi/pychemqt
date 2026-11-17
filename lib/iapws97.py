@@ -289,11 +289,11 @@ class IAPWS97(ThermoWater):
             self.sigma = unidades.Tension(st.sigma)
             self.fill(self.Gas, st.Vapor)
 
-            self.h = unidades.Enthalpy(st.h)
-            self.s = unidades.SpecificHeat(st.s)
-            self.u = unidades.SpecificHeat(st.u)
-            self.a = unidades.Enthalpy(st.a)
-            self.g = unidades.Enthalpy(st.g)
+            self.h = unidades.Enthalpy(st.h, "kJkg")
+            self.s = unidades.SpecificHeat(st.s, "kJkgK")
+            self.u = unidades.Enthalpy(st.u, "kJkg")
+            self.a = unidades.Enthalpy(st.a, "kJkg")
+            self.g = unidades.Enthalpy(st.g, "kJkg")
 
             self.cv = unidades.SpecificHeat(None)
             self.cp = unidades.SpecificHeat(None)
