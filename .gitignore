@@ -148,3 +148,12 @@ iapws
 
 # Github tokens
 github_token
+
+# Container state snapshots
+docker/backups/
+
+# Local agent transcripts
+session-ses_*.md
+
+# Scratch project files
+/pump.pcq
