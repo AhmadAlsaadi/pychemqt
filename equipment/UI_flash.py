@@ -183,7 +183,9 @@ class UI_equipment (UI_equip):
 
         if equipment:
             if getattr(equipment, "_state_incomplete", False):
+                salida = equipment.salida
                 equipment.calculo()
+                equipment.salida = salida
                 equipment._state_incomplete = False
             self.setEquipment(equipment)
 
