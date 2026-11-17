@@ -165,7 +165,39 @@ class Project(object):
                 kwargs = {eq.kwargsInput[ind_down]: obj}
             eq(**kwargs)
 
+    def reconnectStream(self, id, up, down, ind_up, ind_down, obj):
+        """Change the connections of an existing stream and update inputs"""
+        old_up, old_down, old_ind_up, old_ind_down, old_obj = self.streams[id]
+        if old_down[0] == "e":
+            equip = self.items[old_down]
+            if isinstance(equip, Mixer):
+                entradas = equip.kwargs["entrada"][:]
+                if old_ind_down < len(entradas):
+                    entradas.pop(old_ind_down)
+                for sid, (u, d, iu, idn, o) in list(self.streams.items()):
+                    if sid != id and d == old_down and idn > old_ind_down:
+                        self.streams[sid] = (u, d, iu, idn-1, o)
+                if old_down == down and old_ind_down < ind_down:
+                    ind_down -= 1
+                equip(entrada=entradas)
+            elif old_ind_down < len(equip.kwargsInput):
+                key = equip.kwargsInput[old_ind_down]
+                shared = any(
+                    sid != id and d == old_down and idn == old_ind_down
+                    for sid, (u, d, iu, idn, o) in self.streams.items())
+                if not shared:
+                    equip(**{key: None})
+        self.streams[id] = (up, down, ind_up, ind_down, obj)
+        if down[0] == "e":
+            equip = self.items[down]
+            if isinstance(equip, Mixer):
+                equip(entrada=obj, id_entrada=ind_down)
+            elif ind_down < len(equip.kwargsInput):
+                equip(**{equip.kwargsInput[ind_down]: obj})
+
     def setStream(self, id, obj):
+        if obj is None:
+            return
         stream = self.streams[id]
         self.streams[id] = stream[0:4]+(obj, )
         self.run("s%i" % id)
@@ -208,7 +240,7 @@ class Project(object):
 
         elif tipo == "s":
             up, down, ind_up, ind_down, stream = self.streams[ind]
-            if stream.status:
+            if stream is not None and stream.status:
                 if down[0] == "e":
                     equip = self.items[down]
                     if isinstance(equip, Mixer):
@@ -252,10 +284,11 @@ class Project(object):
             stream["down"] = item[1]
             stream["ind_up"] = item[2]
             stream["ind_down"] = item[3]
-            item[4].writeToJSON(stream)
+            obj = item[4] if item[4] is not None else Corriente()
+            obj.writeToJSON(stream)
             streams[id] = stream
-            if item[4]._dependence:
-                dependences.add(item[4]._dependence)
+            if obj._dependence:
+                dependences.add(obj._dependence)
         data["stream"] = streams
 
         # write external dependences necessaries for the project

@@ -1,0 +1,1095 @@
+{
+    "config": {
+        "Components": {
+            "solids": "[]",
+            "components": "[62]"
+        },
+        "Units": {
+            "pressuredensity": "1",
+            "speed": "0",
+            "deltat": "1",
+            "head": "0",
+            "diffusivity": "0",
+            "thermalconductivity": "1",
+            "system": "4",
+            "area": "0",
+            "particlediameter": "2",
+            "thickness": "2",
+            "cakeresistance": "0",
+            "molarenthalpy": "1",
+            "frequency": "0",
+            "kviscosity": "0",
+            "heattransfcoef": "0",
+            "time": "2",
+            "fouling": "0",
+            "densitytemperature": "0",
+            "length": "0",
+            "ua": "2",
+            "molarflow": "2",
+            "qgas": "2",
+            "mol": "0",
+            "pipediameter": "2",
+            "dengas": "0",
+            "molarvolume": "0",
+            "temperaturepressure": "1",
+            "enthalpypressure": "1",
+            "massflow": "2",
+            "tension": "1",
+            "volliq": "0",
+            "deltap": "4",
+            "v2v": "0",
+            "specificvolume_square": "0",
+            "denliq": "0",
+            "volgas": "0",
+            "enthalpydensity": "1",
+            "density": "0",
+            "specificentropy": "1",
+            "packingdp": "0",
+            "pressure": "4",
+            "force": "1",
+            "invtemperature": "1",
+            "energyflow": "9",
+            "solubilityparameter": "0",
+            "qliq": "2",
+            "volume": "0",
+            "energy": "2",
+            "currency": "0",
+            "potencialelectric": "0",
+            "temperature": "1",
+            "specificvolume": "0",
+            "work": "2",
+            "molarspecificheat": "1",
+            "pressuretemperature": "1",
+            "acceleration": "0",
+            "angle": "0",
+            "mass": "0",
+            "heatflux": "0",
+            "specificheat": "1",
+            "densitypressure": "1",
+            "viscosity": "2",
+            "volflow": "2",
+            "enthalpy": "1",
+            "power": "3",
+            "dipolemoment": "0",
+            "molardensity": "0",
+            "entropy": "1",
+            "invpressure": "4"
+        },
+        "Thermo": {
+            "refprop": "False",
+            "meos": "False",
+            "alfa": "0",
+            "coolprop": "False",
+            "freesteam": "False",
+            "k": "0",
+            "gerg": "False",
+            "h": "0",
+            "mixing": "0",
+            "cp_ideal": "0",
+            "iapws": "True"
+        },
+        "PFD": {
+            "y": "600",
+            "x": "800"
+        },
+        "Transport": {
+            "corr_thcondl": "0",
+            "corr_thcondg": "0",
+            "tension": "0",
+            "thcondg": "0",
+            "corr_mul": "0",
+            "corr_mug": "0",
+            "mug": "0",
+            "mul": "0",
+            "thcondl": "0",
+            "rhol": "0",
+            "rholmix": "0",
+            "corr_rholmix": "0",
+            "mugmix": "0",
+            "corr_mugmix": "0",
+            "mulmix": "0",
+            "thcondlmix": "0",
+            "thcondgmix": "0",
+            "corr_thcondgmix": "0",
+            "rholeos": "false",
+            "pv": "0",
+            "f_acent": "0",
+            "corr_rhol": "0"
+        }
+    },
+    "equipment": {
+        "e1": {
+            "id": 3,
+            "kwarg": {
+                "rendimiento": 0.8,
+                "Carga": 15.0,
+                "f_install": 2.8,
+                "Base_index": 421.1,
+                "Current_index": 1543.2
+            },
+            "status": 1,
+            "msg": "",
+            "bool": true,
+            "external_dependences": "",
+            "notas": "",
+            "notasPlain": "",
+            "state": {
+                "deltaP": 137515.77925482197,
+                "rendimientoCalculado": 0.8,
+                "headCalculada": 15.0,
+                "power": 5.107630208333332,
+                "P_freno": 4.086104166666666,
+                "Pin": 300000.0,
+                "PoutCalculada": 437515.77925482194,
+                "volflow": 2.9713711319593076e-05,
+                "statusCoste": true,
+                "cp_cv": 1.1782229260717096,
+                "C_bomba": 474225.2787668348,
+                "C_motor": 5182.753275472316,
+                "C_adq": 479408.03204230714,
+                "C_inst": 1342342.48971846
+            }
+        },
+        "e2": {
+            "id": 7,
+            "kwarg": {
+                "flash": 4,
+                "Pout": 100000.0,
+                "xout": 0.5,
+                "f_install": 1.7,
+                "Base_index": 326.01,
+                "Current_index": 801.8
+            },
+            "status": 1,
+            "msg": "",
+            "bool": true,
+            "external_dependences": "",
+            "notas": "",
+            "notasPlain": "",
+            "state": {
+                "Tout": 372.7559186113376,
+                "Pout": 100000.0,
+                "VaporMolarFlow": 8.815351638552881e-05,
+                "VaporMassFlow": 0.0015880855976853016,
+                "VaporVolFlow": 0.0026902527707762733,
+                "VaporMolarComposition": [
+                    1.0
+                ],
+                "VaporMassComposition": [
+                    1.0
+                ],
+                "LiquidMolarFlow": 0.0014537714227084361,
+                "LiquidMassFlow": 0.026189692180092476,
+                "LiquidVolFlow": 2.7319720805802887e-05,
+                "LiquidMolarComposition": [
+                    1.0
+                ],
+                "LiquidMassComposition": [
+                    1.0
+                ],
+                "statusCoste": false
+            }
+        }
+    },
+    "stream": {
+        "1": {
+            "up": "i1",
+            "down": "e1",
+            "ind_up": 0,
+            "ind_down": 0,
+            "kwarg": {
+                "T": 403.15,
+                "P": 300000.0,
+                "caudalMasico": 0.027777777777777776,
+                "fraccionMolar": [
+                    1.0
+                ],
+                "K": "vdW",
+                "alfa": "Original",
+                "mix": "van der Waals",
+                "H": "vdW",
+                "iapws": true
+            },
+            "status": 1,
+            "msg": "",
+            "bool": true,
+            "external_dependences": "",
+            "notas": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>",
+            "notasPlain": "",
+            "state": {
+                "thermo": "iapws",
+                "bool": true,
+                "thermoType": "TP",
+                "T": 403.15,
+                "P": 300000.0,
+                "x": 0.0,
+                "M": 18.015268,
+                "Tc": 647.096,
+                "Pc": 22064000.0,
+                "h": 15177.998581214866,
+                "s": 45.40561793901111,
+                "rho": 934.8471309762388,
+                "Q": 2.9713711319593076e-05,
+                "SG": 1.0,
+                "Tr": 0.6230142050020399,
+                "Pr": 0.013596809282088469,
+                "Hvap": 0.0,
+                "Svap": 0.0,
+                "v0": 0.0,
+                "rho0": 0.0,
+                "h0": 0.0,
+                "u0": 0.0,
+                "s0": 0.0,
+                "a0": 0.0,
+                "g0": 0.0,
+                "cp0": 0.0,
+                "cv0": 0.0,
+                "cp0_cv": 0.0,
+                "gamma0": 0.0,
+                "fluxType": 3,
+                "mezcla": {
+                    "ids": [
+                        62
+                    ],
+                    "fraction": [
+                        1.0
+                    ],
+                    "massFraction": [
+                        1.0
+                    ],
+                    "massUnitFlow": [
+                        0.027777777777777776
+                    ],
+                    "molarUnitFlow": [
+                        0.0015419249390939648
+                    ],
+                    "massFlow": 0.027777777777777776,
+                    "molarFlow": 0.0015419249390939648,
+                    "M": 18.015,
+                    "Tc": 647.35,
+                    "tpc": 647.35,
+                    "ppc": 22118234.25,
+                    "Pc": 22118234.25,
+                    "w": 0.348,
+                    "wm": 0.0,
+                    "Vc": 0.004073978051623646,
+                    "Tb": 373.15,
+                    "SG": 1.0
+                },
+                "liquid": {
+                    "M": 18.015268,
+                    "v": 0.0010696936075053507,
+                    "h": 546407.9489237352,
+                    "s": 1634.6022458044,
+                    "u": 546087.0408414836,
+                    "a": -112902.85455456012,
+                    "g": -112581.94647230857,
+                    "cv": 3619.6591637887364,
+                    "cp": 4264.765411341443,
+                    "cp/cv": 1.1782229260717096,
+                    "w": 1505.084464789993,
+                    "Z": 0.001724716900677608,
+                    "alfav": 0.0009122947031565565,
+                    "kappa": 5.563718179010274e-10,
+                    "kappas": 5.562876587736026e-10,
+                    "mu": 0.0002129475088006544,
+                    "k": 0.6829665273151156,
+                    "nu": 2.2778858889824942e-07,
+                    "Prandt": 1.3297447731949166,
+                    "alfa": 1.713024886354336e-07,
+                    "joule": -0.000158571271481357,
+                    "deltat": 0.000676269273846125,
+                    "gamma": 1.1782229260717096,
+                    "alfap": 5.465737562566741,
+                    "betap": 5600853.60723368,
+                    "fi": [
+                        0.8757850709331569
+                    ],
+                    "f": [
+                        262735.5212799471
+                    ],
+                    "volFlow": 2.9713711319593076e-05,
+                    "massFlow": 0.027777777777777776,
+                    "molarFlow": 0.0015419249390939648,
+                    "fraction": [
+                        1
+                    ],
+                    "massFraction": [
+                        1
+                    ],
+                    "massUnitFlow": [
+                        0.027777777777777776
+                    ],
+                    "molarUnitFlow": [
+                        0.0015419249390939648
+                    ],
+                    "n": 1.3102585766749981,
+                    "epsilon": 48.32693206697538,
+                    "sigma": 0.05293214602484924
+                },
+                "gas": {}
+            },
+            "solid": {}
+        },
+        "2": {
+            "up": "e1",
+            "down": "o1",
+            "ind_up": 0,
+            "ind_down": 0,
+            "kwarg": {
+                "T": 403.15,
+                "P": 437515.77925482194,
+                "caudalMasico": 0.027777777777777776,
+                "fraccionMolar": [
+                    1.0
+                ],
+                "K": "vdW",
+                "alfa": "Original",
+                "mix": "van der Waals",
+                "H": "vdW",
+                "iapws": true
+            },
+            "status": 1,
+            "msg": "",
+            "bool": true,
+            "external_dependences": "",
+            "notas": "",
+            "notasPlain": "",
+            "state": {
+                "thermo": "iapws",
+                "bool": true,
+                "thermoType": "TP",
+                "T": 403.15,
+                "P": 437515.77925482194,
+                "x": 0.0,
+                "M": 18.015268,
+                "Tc": 647.096,
+                "Pc": 22064000.0,
+                "h": 15180.582067405649,
+                "s": 45.401891133366675,
+                "rho": 934.918638603375,
+                "Q": 2.9711438654462503e-05,
+                "SG": 1.0,
+                "Tr": 0.6230142050020399,
+                "Pr": 0.019829395361440443,
+                "Hvap": 0.0,
+                "Svap": 0.0,
+                "v0": 0.0,
+                "rho0": 0.0,
+                "h0": 0.0,
+                "u0": 0.0,
+                "s0": 0.0,
+                "a0": 0.0,
+                "g0": 0.0,
+                "cp0": 0.0,
+                "cv0": 0.0,
+                "cp0_cv": 0.0,
+                "gamma0": 0.0,
+                "fluxType": 3,
+                "mezcla": {
+                    "ids": [
+                        62
+                    ],
+                    "fraction": [
+                        1.0
+                    ],
+                    "massFraction": [
+                        1.0
+                    ],
+                    "massUnitFlow": [
+                        0.027777777777777776
+                    ],
+                    "molarUnitFlow": [
+                        0.0015419249390939648
+                    ],
+                    "massFlow": 0.027777777777777776,
+                    "molarFlow": 0.0015419249390939648,
+                    "M": 18.015,
+                    "Tc": 647.35,
+                    "tpc": 647.35,
+                    "ppc": 22118234.25,
+                    "Pc": 22118234.25,
+                    "w": 0.348,
+                    "wm": 0.0,
+                    "Vc": 0.004073978051623646,
+                    "Tb": 373.15,
+                    "SG": 1.0
+                },
+                "liquid": {
+                    "M": 18.015268,
+                    "v": 0.0010696117915606502,
+                    "h": 546500.9544266034,
+                    "s": 1634.4680808012004,
+                    "u": 546032.9823901186,
+                    "a": -112902.82438488532,
+                    "g": -112434.85234840057,
+                    "cv": 3619.5097294533107,
+                    "cp": 4264.388561788837,
+                    "cp/cv": 1.1781674537542766,
+                    "w": 1505.41600065616,
+                    "Z": 0.0025151104786979,
+                    "alfav": 0.000911911540384568,
+                    "kappa": 5.560580699850651e-10,
+                    "kappas": 5.559739805373782e-10,
+                    "mu": 0.00021298345909315195,
+                    "k": 0.6830531042811824,
+                    "nu": 2.278096192534107e-07,
+                    "Prandt": 1.3296831843885075,
+                    "alfa": 1.7132623915837174e-07,
+                    "joule": -0.00015861190050300115,
+                    "deltat": 0.0006763827742685872,
+                    "gamma": 1.1781674537542766,
+                    "alfap": 3.7483388403329645,
+                    "betap": 3842907.662019926,
+                    "fi": [
+                        0.6009916051984288
+                    ],
+                    "f": [
+                        262943.31047399685
+                    ],
+                    "volFlow": 2.9711438654462503e-05,
+                    "massFlow": 0.027777777777777776,
+                    "molarFlow": 0.0015419249390939648,
+                    "fraction": [
+                        1
+                    ],
+                    "massFraction": [
+                        1
+                    ],
+                    "massUnitFlow": [
+                        0.027777777777777776
+                    ],
+                    "molarUnitFlow": [
+                        0.0015419249390939648
+                    ],
+                    "n": 1.3102819829761279,
+                    "epsilon": 48.33192466936782,
+                    "sigma": 0.05293214602484924
+                },
+                "gas": {}
+            },
+            "solid": {}
+        },
+        "3": {
+            "up": "e1",
+            "down": "e2",
+            "ind_up": 0,
+            "ind_down": 0,
+            "kwarg": {
+                "T": 403.15,
+                "P": 437515.77925482194,
+                "caudalMasico": 0.027777777777777776,
+                "fraccionMolar": [
+                    1.0
+                ],
+                "K": "vdW",
+                "alfa": "Original",
+                "mix": "van der Waals",
+                "H": "vdW",
+                "iapws": true
+            },
+            "status": 1,
+            "msg": "",
+            "bool": true,
+            "external_dependences": "",
+            "notas": "",
+            "notasPlain": "",
+            "state": {
+                "thermo": "iapws",
+                "bool": true,
+                "thermoType": "TP",
+                "T": 403.15,
+                "P": 437515.77925482194,
+                "x": 0.0,
+                "M": 18.015268,
+                "Tc": 647.096,
+                "Pc": 22064000.0,
+                "h": 15180.582067405649,
+                "s": 45.401891133366675,
+                "rho": 934.918638603375,
+                "Q": 2.9711438654462503e-05,
+                "SG": 1.0,
+                "Tr": 0.6230142050020399,
+                "Pr": 0.019829395361440443,
+                "Hvap": 0.0,
+                "Svap": 0.0,
+                "v0": 0.0,
+                "rho0": 0.0,
+                "h0": 0.0,
+                "u0": 0.0,
+                "s0": 0.0,
+                "a0": 0.0,
+                "g0": 0.0,
+                "cp0": 0.0,
+                "cv0": 0.0,
+                "cp0_cv": 0.0,
+                "gamma0": 0.0,
+                "fluxType": 3,
+                "mezcla": {
+                    "ids": [
+                        62
+                    ],
+                    "fraction": [
+                        1.0
+                    ],
+                    "massFraction": [
+                        1.0
+                    ],
+                    "massUnitFlow": [
+                        0.027777777777777776
+                    ],
+                    "molarUnitFlow": [
+                        0.0015419249390939648
+                    ],
+                    "massFlow": 0.027777777777777776,
+                    "molarFlow": 0.0015419249390939648,
+                    "M": 18.015,
+                    "Tc": 647.35,
+                    "tpc": 647.35,
+                    "ppc": 22118234.25,
+                    "Pc": 22118234.25,
+                    "w": 0.348,
+                    "wm": 0.0,
+                    "Vc": 0.004073978051623646,
+                    "Tb": 373.15,
+                    "SG": 1.0
+                },
+                "liquid": {
+                    "M": 18.015268,
+                    "v": 0.0010696117915606502,
+                    "h": 546500.9544266034,
+                    "s": 1634.4680808012004,
+                    "u": 546032.9823901186,
+                    "a": -112902.82438488532,
+                    "g": -112434.85234840057,
+                    "cv": 3619.5097294533107,
+                    "cp": 4264.388561788837,
+                    "cp/cv": 1.1781674537542766,
+                    "w": 1505.41600065616,
+                    "Z": 0.0025151104786979,
+                    "alfav": 0.000911911540384568,
+                    "kappa": 5.560580699850651e-10,
+                    "kappas": 5.559739805373782e-10,
+                    "mu": 0.00021298345909315195,
+                    "k": 0.6830531042811824,
+                    "nu": 2.278096192534107e-07,
+                    "Prandt": 1.3296831843885075,
+                    "alfa": 1.7132623915837174e-07,
+                    "joule": -0.00015861190050300115,
+                    "deltat": 0.0006763827742685872,
+                    "gamma": 1.1781674537542766,
+                    "alfap": 3.7483388403329645,
+                    "betap": 3842907.662019926,
+                    "fi": [
+                        0.6009916051984288
+                    ],
+                    "f": [
+                        262943.31047399685
+                    ],
+                    "volFlow": 2.9711438654462503e-05,
+                    "massFlow": 0.027777777777777776,
+                    "molarFlow": 0.0015419249390939648,
+                    "fraction": [
+                        1
+                    ],
+                    "massFraction": [
+                        1
+                    ],
+                    "massUnitFlow": [
+                        0.027777777777777776
+                    ],
+                    "molarUnitFlow": [
+                        0.0015419249390939648
+                    ],
+                    "n": 1.3102819829761279,
+                    "epsilon": 48.33192466936782,
+                    "sigma": 0.05293214602484924
+                },
+                "gas": {}
+            },
+            "solid": {}
+        },
+        "4": {
+            "up": "e2",
+            "down": "o5",
+            "ind_up": 0,
+            "ind_down": 0,
+            "kwarg": {
+                "P": 100000.0,
+                "x": 1,
+                "caudalMasico": 0.0015880855976853016,
+                "fraccionMolar": [
+                    1
+                ],
+                "K": "vdW",
+                "alfa": "Original",
+                "mix": "van der Waals",
+                "H": "vdW",
+                "iapws": true
+            },
+            "status": 1,
+            "msg": "",
+            "bool": true,
+            "external_dependences": "",
+            "notas": "",
+            "notasPlain": "",
+            "state": {
+                "thermo": "iapws",
+                "bool": true,
+                "thermoType": "Px",
+                "T": 372.7559186113376,
+                "P": 100000.0,
+                "x": 1.0,
+                "M": 18.015268,
+                "Tc": 647.096,
+                "Pc": 22064000.0,
+                "h": 4248.048999139002,
+                "s": 11.686414842833193,
+                "rho": 0.5903109235445779,
+                "Q": 0.0026902527707762733,
+                "SG": 1.0,
+                "Tr": 0.5760442324034418,
+                "Pr": 0.0045322697606961565,
+                "Hvap": 0.0,
+                "Svap": 0.0,
+                "v0": 0.0,
+                "rho0": 0.0,
+                "h0": 0.0,
+                "u0": 0.0,
+                "s0": 0.0,
+                "a0": 0.0,
+                "g0": 0.0,
+                "cp0": 0.0,
+                "cv0": 0.0,
+                "cp0_cv": 0.0,
+                "gamma0": 0.0,
+                "fluxType": 3,
+                "mezcla": {
+                    "ids": [
+                        62
+                    ],
+                    "fraction": [
+                        1.0
+                    ],
+                    "massFraction": [
+                        1.0
+                    ],
+                    "massUnitFlow": [
+                        0.0015880855976853016
+                    ],
+                    "molarUnitFlow": [
+                        8.815351638552881e-05
+                    ],
+                    "massFlow": 0.0015880855976853016,
+                    "molarFlow": 8.815351638552881e-05,
+                    "M": 18.015,
+                    "Tc": 647.35,
+                    "tpc": 647.35,
+                    "ppc": 22118234.25,
+                    "Pc": 22118234.25,
+                    "w": 0.348,
+                    "wm": 0.0,
+                    "Vc": 0.004073978051623646,
+                    "Tb": 373.15,
+                    "SG": 1.0
+                },
+                "liquid": {},
+                "gas": {
+                    "M": 18.015268,
+                    "v": 1.694022522902685,
+                    "h": 2674949.6408321466,
+                    "s": 7358.806641069355,
+                    "u": 2505547.3885418777,
+                    "a": -237491.3408331413,
+                    "g": -68089.08854287256,
+                    "cv": 1552.6969793308026,
+                    "cp": 2075.9380252044393,
+                    "cp/cv": 1.336988512787053,
+                    "w": 472.0541571060476,
+                    "Z": 0.9846875804475954,
+                    "alfav": 0.0029020884180006364,
+                    "kappa": 1.0163965984918026e-05,
+                    "kappas": 1.0161404153048479e-05,
+                    "mu": 1.2218469398388992e-05,
+                    "k": 0.02453167189634518,
+                    "nu": 2.0698362356268174e-05,
+                    "Prandt": 1.0339607239607447,
+                    "alfa": 2.001851895977241e-05,
+                    "joule": 0.0667270863911706,
+                    "deltat": -0.13852129595053272,
+                    "gamma": 1.336988512787053,
+                    "alfap": 0.0028552716747645055,
+                    "betap": 0.5807879762885086,
+                    "fi": [
+                        0.9851695799633396
+                    ],
+                    "f": [
+                        98516.95799633398
+                    ],
+                    "volFlow": 0.0026902527707762733,
+                    "massFlow": 0.0015880855976853016,
+                    "molarFlow": 8.815351638552881e-05,
+                    "fraction": [
+                        1
+                    ],
+                    "massFraction": [
+                        1
+                    ],
+                    "massUnitFlow": [
+                        0.0015880855976853016
+                    ],
+                    "molarUnitFlow": [
+                        8.815351638552881e-05
+                    ],
+                    "n": 1.0001878411500746,
+                    "epsilon": 1.0058182208914879
+                }
+            },
+            "solid": {}
+        },
+        "5": {
+            "up": "e2",
+            "down": "o6",
+            "ind_up": 1,
+            "ind_down": 0,
+            "kwarg": {
+                "P": 100000.0,
+                "caudalMasico": 0.026189692180092476,
+                "fraccionMolar": [
+                    1
+                ],
+                "K": "vdW",
+                "alfa": "Original",
+                "mix": "van der Waals",
+                "H": "vdW",
+                "iapws": true
+            },
+            "status": 1,
+            "msg": "",
+            "bool": true,
+            "external_dependences": "",
+            "notas": "",
+            "notasPlain": "",
+            "state": {
+                "thermo": "iapws",
+                "bool": true,
+                "thermoType": "Px",
+                "T": 372.7559186113376,
+                "P": 100000.0,
+                "x": 0.0,
+                "M": 18.015268,
+                "Tc": 647.096,
+                "Pc": 22064000.0,
+                "h": 10932.533068266646,
+                "s": 34.11364999720442,
+                "rho": 958.6368896760326,
+                "Q": 2.7319720805802887e-05,
+                "SG": 1.0,
+                "Tr": 0.5760442324034418,
+                "Pr": 0.0045322697606961565,
+                "Hvap": 0.0,
+                "Svap": 0.0,
+                "v0": 0.0,
+                "rho0": 0.0,
+                "h0": 0.0,
+                "u0": 0.0,
+                "s0": 0.0,
+                "a0": 0.0,
+                "g0": 0.0,
+                "cp0": 0.0,
+                "cv0": 0.0,
+                "cp0_cv": 0.0,
+                "gamma0": 0.0,
+                "fluxType": 3,
+                "mezcla": {
+                    "ids": [
+                        62
+                    ],
+                    "fraction": [
+                        1.0
+                    ],
+                    "massFraction": [
+                        1.0
+                    ],
+                    "massUnitFlow": [
+                        0.026189692180092476
+                    ],
+                    "molarUnitFlow": [
+                        0.0014537714227084361
+                    ],
+                    "massFlow": 0.026189692180092476,
+                    "molarFlow": 0.0014537714227084361,
+                    "M": 18.015,
+                    "Tc": 647.35,
+                    "tpc": 647.35,
+                    "ppc": 22118234.25,
+                    "Pc": 22118234.25,
+                    "w": 0.348,
+                    "wm": 0.0,
+                    "Vc": 0.004073978051623646,
+                    "Tb": 373.15,
+                    "SG": 1.0
+                },
+                "liquid": {
+                    "M": 18.015268,
+                    "v": 0.001043147839155184,
+                    "h": 417436.4858162317,
+                    "s": 1302.5601737745953,
+                    "u": 417332.17103231617,
+                    "a": -68204.84308957668,
+                    "g": -68100.52830566115,
+                    "cv": 3769.6996827334992,
+                    "cp": 4216.149430838748,
+                    "cp/cv": 1.1184311180410844,
+                    "w": 1545.451947533965,
+                    "Z": 0.0006063524586596437,
+                    "alfav": 0.0007488987953105213,
+                    "kappa": 4.884769692116309e-10,
+                    "kappas": 4.88425244190154e-10,
+                    "mu": 0.00028275367508684743,
+                    "k": 0.6770671458946849,
+                    "nu": 2.949538851800319e-07,
+                    "Prandt": 1.7607289816280758,
+                    "alfa": 1.6751804977237316e-07,
+                    "joule": -0.00017834908252927577,
+                    "deltat": 0.000751946382796419,
+                    "gamma": 1.1184311180410844,
+                    "alfap": 15.331302037006857,
+                    "betap": 19625017.14713814,
+                    "fi": [
+                        0.9851040721876642
+                    ],
+                    "f": [
+                        98510.40721876641
+                    ],
+                    "volFlow": 2.7319720805802887e-05,
+                    "massFlow": 0.026189692180092476,
+                    "molarFlow": 0.0014537714227084361,
+                    "fraction": [
+                        1
+                    ],
+                    "massFraction": [
+                        1
+                    ],
+                    "massUnitFlow": [
+                        0.02618969218009248
+                    ],
+                    "molarUnitFlow": [
+                        0.0014537714227084361
+                    ],
+                    "n": 1.3186806101588135,
+                    "epsilon": 55.62826869136451,
+                    "sigma": 0.05898778418085994
+                },
+                "gas": {}
+            },
+            "solid": {}
+        }
+    },
+    "external_dependences": [],
+    "PFD": {
+        "minimized": false,
+        "maximized": false,
+        "x": 0,
+        "y": 0,
+        "height": 463,
+        "width": 970,
+        "txt": {},
+        "square": {},
+        "ellipse": {},
+        "stream": {
+            "1": {
+                "input_x": 265.0,
+                "input_y": 229.0,
+                "output_x": 392.0,
+                "output_y": 229.0,
+                "pen": {
+                    "color": "#0000ff",
+                    "width": 1.0,
+                    "joinStyle": 0,
+                    "miterLimit": 2.0,
+                    "capStyle": 0,
+                    "style": 1,
+                    "dashOffset": 0.0
+                },
+                "up_id": 1,
+                "up_type": "i",
+                "down_id": 1,
+                "down_type": "e",
+                "input_angle": 0,
+                "output_angle": 0,
+                "label": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">S1</p></body></html>",
+                "label_x": 328.5,
+                "label_y": 229.0,
+                "label_visible": 0
+            },
+            "2": {
+                "input_x": 452.0,
+                "input_y": 211.0,
+                "output_x": 503.0,
+                "output_y": 211.0,
+                "pen": {
+                    "color": "#0000ff",
+                    "width": 1.0,
+                    "joinStyle": 0,
+                    "miterLimit": 2.0,
+                    "capStyle": 0,
+                    "style": 1,
+                    "dashOffset": 0.0
+                },
+                "up_id": 1,
+                "up_type": "e",
+                "down_id": 1,
+                "down_type": "o",
+                "input_angle": 0,
+                "output_angle": 0,
+                "label": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">S2</p></body></html>",
+                "label_x": 477.5,
+                "label_y": 211.0,
+                "label_visible": 0
+            },
+            "3": {
+                "input_x": 452.0,
+                "input_y": 211.0,
+                "output_x": 609.0,
+                "output_y": 284.5,
+                "pen": {
+                    "color": "#000000",
+                    "width": 1.0,
+                    "joinStyle": 0,
+                    "miterLimit": 2.0,
+                    "capStyle": 0,
+                    "style": 0,
+                    "dashOffset": 0.0
+                },
+                "up_id": 1,
+                "up_type": "e",
+                "down_id": 2,
+                "down_type": "e",
+                "input_angle": 270,
+                "output_angle": 0,
+                "label": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">S3</p></body></html>",
+                "label_x": 589.0,
+                "label_y": 237.75,
+                "label_visible": 1
+            },
+            "4": {
+                "input_x": 624.0,
+                "input_y": 235.0,
+                "output_x": 773.0,
+                "output_y": 202.0,
+                "pen": {
+                    "color": "#0000ff",
+                    "width": 1.0,
+                    "joinStyle": 0,
+                    "miterLimit": 2.0,
+                    "capStyle": 0,
+                    "style": 0,
+                    "dashOffset": 0.0
+                },
+                "up_id": 2,
+                "up_type": "e",
+                "down_id": 5,
+                "down_type": "o",
+                "input_angle": 270,
+                "output_angle": 0,
+                "label": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">S4</p></body></html>",
+                "label_x": 753.0,
+                "label_y": 208.5,
+                "label_visible": 1
+            },
+            "5": {
+                "input_x": 624.0,
+                "input_y": 334.0,
+                "output_x": 770.0,
+                "output_y": 390.0,
+                "pen": {
+                    "color": "#0000ff",
+                    "width": 1.0,
+                    "joinStyle": 0,
+                    "miterLimit": 2.0,
+                    "capStyle": 0,
+                    "style": 0,
+                    "dashOffset": 0.0
+                },
+                "up_id": 2,
+                "up_type": "e",
+                "down_id": 6,
+                "down_type": "o",
+                "input_angle": 90,
+                "output_angle": 0,
+                "label": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">S5</p></body></html>",
+                "label_x": 750.0,
+                "label_y": 352.0,
+                "label_visible": 1
+            }
+        },
+        "in": {
+            "1": {
+                "x": 216.0,
+                "y": 219.0,
+                "angle": 0,
+                "down_id": 1
+            }
+        },
+        "out": {
+            "1": {
+                "x": 503.0,
+                "y": 201.0,
+                "angle": 0,
+                "up_id": 2
+            },
+            "5": {
+                "x": 773.0,
+                "y": 192.0,
+                "angle": 0,
+                "up_id": 4
+            },
+            "6": {
+                "x": 770.0,
+                "y": 380.0,
+                "angle": 0,
+                "up_id": 5
+            }
+        },
+        "equip": {
+            "1": {
+                "name": "pump",
+                "dialogo_id": 3,
+                "x": 392.0,
+                "y": 202.0,
+                "angle": 0,
+                "up_id": [
+                    1
+                ],
+                "down_id": [
+                    2,
+                    3
+                ],
+                "label": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">E1</p></body></html>",
+                "label_x": 20.0,
+                "label_y": -20.0,
+                "label_visible": 0
+            },
+            "2": {
+                "name": "flash",
+                "dialogo_id": 7,
+                "x": 609.0,
+                "y": 235.0,
+                "angle": 0,
+                "up_id": [
+                    3
+                ],
+                "down_id": [
+                    4,
+                    5
+                ],
+                "label": "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\np, li { white-space: pre-wrap; }\nhr { height: 1px; border-width: 0; }\nli.unchecked::marker { content: \"\\2610\"; }\nli.checked::marker { content: \"\\2612\"; }\n</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">E2</p></body></html>",
+                "label_x": 10.0,
+                "label_y": -20.0,
+                "label_visible": 1
+            }
+        }
+    },
+    "other": {}
+}

@@ -42,7 +42,6 @@ Dialog related defined:
 
 
 from ast import literal_eval
-from copy import deepcopy
 from datetime import datetime
 from functools import partial
 import json
@@ -214,12 +213,250 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.project = Project()
+        self.objects = {"txt": [], "square": [], "ellipse": [], "stream": {},
+                        "in": {}, "out": {}, "equip": {}}
+        self.connection = None
+        self.tempLine = None
+        self.highlighted_port = None
 
         self.popup = Table_Graphics()
         proxy = QtWidgets.QGraphicsProxyWidget()
         proxy.setWidget(self.popup)
         self.addItem(proxy)
         self.popup.hide()
+
+    def markModified(self):
+        """Mark the current project as modified and update save actions"""
+        mainwindow = self.parent()
+        if mainwindow is not None and mainwindow.idTab is not None:
+            mainwindow.dirty[mainwindow.idTab] = True
+            mainwindow.saveControl()
+
+    def redraw(self):
+        """Recalculate all stream paths from the current item positions"""
+        for stream in self.objects["stream"].values():
+            stream.redraw()
+        self.update()
+
+    def showAllPorts(self, visible):
+        """Show or hide all connection ports"""
+        for key in ("equip", "in", "out"):
+            for item in self.objects[key].values():
+                item.showInput(visible)
+
+    def _portAt(self, pos, kind):
+        """Return the visible port of the requested kind under pos"""
+        for item in self.items(pos):
+            if isinstance(item, PortItem) and item.kind == kind and \
+                    item.isVisible():
+                return item
+        return None
+
+    def _highlightPort(self, port):
+        """Highlight the current valid drop target"""
+        if self.highlighted_port is not port:
+            if self.highlighted_port is not None:
+                self.highlighted_port.setHighlighted(False)
+            if port is not None:
+                port.setHighlighted(True)
+            self.highlighted_port = port
+
+    def _startConnectionLine(self, start):
+        """Create the temporary line used while dragging a connection"""
+        line = QtWidgets.QGraphicsPathItem()
+        pen = QtGui.QPen(QtGui.QColor("#00a0ff"))
+        pen.setWidthF(2)
+        pen.setStyle(QtCore.Qt.PenStyle.DashLine)
+        line.setPen(pen)
+        line.setZValue(100)
+        self.addItem(line)
+        self.tempLine = line
+        self._updateConnectionLine(start, start)
+
+    def _updateConnectionLine(self, start, end):
+        """Update the temporary connection line"""
+        if self.tempLine is None:
+            return
+        path = QtGui.QPainterPath(start)
+        path.lineTo(end)
+        self.tempLine.setPath(path)
+
+    def _cancelConnectionDrag(self):
+        """Remove the temporary connection state"""
+        if self.tempLine is not None:
+            self.removeItem(self.tempLine)
+            self.tempLine = None
+        self._highlightPort(None)
+        self.connection = None
+        self.showAllPorts(False)
+
+    def startConnectionDrag(self, port, event):
+        """Start dragging a new stream from an output port"""
+        if self.connection is not None or port.kind != "output":
+            return False
+        self.connection = {"mode": "new", "source": port,
+                           "stream": None, "endpoint": None}
+        self.showAllPorts(True)
+        self.popup.hide()
+        start = port.equipment.mapToScene(port.rect().center())
+        self._startConnectionLine(start)
+        self.updateConnectionDrag(event)
+        return True
+
+    def startReconnectDrag(self, stream, endpoint, event):
+        """Start dragging an existing stream endpoint to another port"""
+        if self.connection is not None:
+            return False
+        self.connection = {"mode": "reconnect", "source": None,
+                           "stream": stream, "endpoint": endpoint}
+        self.showAllPorts(True)
+        self.popup.hide()
+        start = stream.entrada if endpoint == "input" else stream.salida
+        self._startConnectionLine(start)
+        self.updateConnectionDrag(event)
+        return True
+
+    def updateConnectionDrag(self, event):
+        """Update the temporary line and valid target during a drag"""
+        if self.connection is None:
+            return
+        pos = event.scenePos()
+        if self.connection["mode"] == "new":
+            source = self.connection["source"]
+            start = source.equipment.mapToScene(source.rect().center())
+            target = self._portAt(pos, "input")
+            if target is not None and target.equipment is source.equipment:
+                target = None
+        else:
+            stream = self.connection["stream"]
+            if self.connection["endpoint"] == "input":
+                start = stream.entrada
+                target = self._portAt(pos, "output")
+            else:
+                start = stream.salida
+                target = self._portAt(pos, "input")
+        self._updateConnectionLine(start, pos)
+        self._highlightPort(target)
+
+    def finishConnectionDrag(self, event):
+        """Create or reconnect the stream when the drag is released"""
+        if self.connection is None:
+            return
+        connection = self.connection
+        pos = event.scenePos()
+        if connection["mode"] == "new":
+            target = self._portAt(pos, "input")
+            if target is not None and \
+                    target.equipment is connection["source"].equipment:
+                target = None
+        else:
+            if connection["endpoint"] == "input":
+                target = self._portAt(pos, "output")
+            else:
+                target = self._portAt(pos, "input")
+        self._cancelConnectionDrag()
+        if target is None:
+            return
+        if connection["mode"] == "new":
+            self.createStream(connection["source"], target)
+        else:
+            self.reconnectStream(
+                connection["stream"], connection["endpoint"], target)
+
+    def createStream(self, source, target):
+        """Create a new stream between two ports"""
+        if source.kind != "output" or target.kind != "input":
+            return
+        if source.equipment is target.equipment:
+            return
+        stream = StreamItem()
+        stream.up = source.equipment
+        stream.down = target.equipment
+        source.equipment.down = source.equipment.down + [stream]
+        target.equipment.up = target.equipment.up + [stream]
+        source.equipment.down_used += 1
+        target.equipment.up_used += 1
+        stream.entrada_port = source
+        stream.salida_port = target
+        stream.Ang_entrada = source.direction
+        stream.Ang_salida = target.direction
+        stream.redraw()
+        self.addItem(stream)
+        self.objects["stream"][stream.id] = stream
+        ind_up = source.equipment.output.index(source)
+        ind_down = target.equipment.input.index(target)
+        self.project.addStream(
+            stream.id, f"{source.equipment.tipo}{source.equipment.id}",
+            f"{target.equipment.tipo}{target.equipment.id}", Corriente(),
+            ind_up, ind_down)
+        self.markModified()
+        stream.setSelected(True)
+        if hasattr(self.parent(), "list"):
+            self.parent().list.updateList(self.objects)
+        self.update()
+
+    def _removeConnection(self, equipment, attr, stream):
+        """Remove a stream from an equipment connection list"""
+        streams = getattr(equipment, attr)
+        if stream in streams:
+            setattr(equipment, attr, [s for s in streams if s is not stream])
+            used = "down_used" if attr == "down" else "up_used"
+            setattr(equipment, used, max(0, getattr(equipment, used) - 1))
+
+    def _addConnection(self, equipment, attr, stream):
+        """Add a stream to an equipment connection list"""
+        streams = getattr(equipment, attr)
+        if stream not in streams:
+            setattr(equipment, attr, streams + [stream])
+            used = "down_used" if attr == "down" else "up_used"
+            setattr(equipment, used, getattr(equipment, used) + 1)
+
+    def reconnectStream(self, stream, endpoint, target):
+        """Reconnect an existing stream endpoint to a new port"""
+        if stream.id not in self.project.streams:
+            return
+        old_up, old_down, old_ind_up, old_ind_down, obj = \
+            self.project.streams[stream.id]
+        if endpoint == "input":
+            if target.kind != "output" or \
+                    target.equipment is stream.down:
+                return
+            if target.equipment is stream.up:
+                if stream not in target.equipment.down:
+                    self._addConnection(target.equipment, "down", stream)
+            else:
+                self._removeConnection(stream.up, "down", stream)
+                self._addConnection(target.equipment, "down", stream)
+            stream.up = target.equipment
+            stream.entrada_port = target
+            stream.Ang_entrada = target.direction
+            up = f"{target.equipment.tipo}{target.equipment.id}"
+            down = old_down
+            ind_up = target.equipment.output.index(target)
+            ind_down = old_ind_down
+        else:
+            if target.kind != "input" or \
+                    target.equipment is stream.up:
+                return
+            if target.equipment is stream.down:
+                if stream not in target.equipment.up:
+                    self._addConnection(target.equipment, "up", stream)
+            else:
+                self._removeConnection(stream.down, "up", stream)
+                self._addConnection(target.equipment, "up", stream)
+            stream.down = target.equipment
+            stream.salida_port = target
+            stream.Ang_salida = target.direction
+            up = old_up
+            down = f"{target.equipment.tipo}{target.equipment.id}"
+            ind_up = old_ind_up
+            ind_down = target.equipment.input.index(target)
+        stream.redraw()
+        self.project.reconnectStream(
+            stream.id, up, down, ind_up, ind_down, obj)
+        self.markModified()
+        self.update()
 
     def mousePressEvent(self, event):
         """Save event position to locate item when add"""
@@ -230,7 +467,7 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
     def addActions(self, menu, pos=None):
         """Define actions and state of its to add to context menu"""
         actionCut, actionCopy, actionPaste, actionDelete = self.defineShortcut(pos)
-        menu.addAction(self.tr("Redraw"), self.update)
+        menu.addAction(self.tr("Redraw"), self.redraw)
         menu.addAction(
             QtGui.QIcon(os.path.join(IMAGE_PATH, "button", "configure.png")),
             self.tr("Configure"),
@@ -370,6 +607,8 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
                     self.project.setOutput(item.id, Corriente())
                 else:
                     self.project.copyItem(item.id-1)
+        if count:
+            self.markModified()
 
     def delete(self, items=None):
         """Delete items to the PFD"""
@@ -388,11 +627,17 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
             if tipo in ["stream", "e", "i", "o"]:
                 del self.objects[mapa[tipo]][item.id]
                 item.postDelete()
+                if tipo == "stream":
+                    self.project.streams.pop(item.id, None)
+                else:
+                    self.project.items.pop(f"{tipo}{item.id}", None)
             else:
                 self.objects[tipo].remove(item)
             self.removeItem(item)
         self.update()
         self.parent().list.updateList(self.objects)
+        if items:
+            self.markModified()
 
     def configure(self):
         """Show configure dialog for PFD"""
@@ -429,6 +674,8 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
             self.down.up_used += 1
             self.obj.Ang_entrada = self.points[0].direction
             self.obj.Ang_salida = self.points[1].direction
+            self.obj.entrada_port = self.points[0]
+            self.obj.salida_port = self.points[1]
             self.obj.redraw(self.Pos[0], self.Pos[1])
 
             # Unchecked stream button in toolbox
@@ -449,13 +696,14 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
             self.project.addItem(
                 f"o{self.obj.id}", self.obj.dialogo.corriente)
         elif self.addType == "stream":
+            ind_up = self.up.output.index(self.points[0])
+            ind_down = self.down.input.index(self.points[1])
             self.project.addStream(
                 self.obj.id, f"{self.up.tipo}{self.up.id}",
                 f"{self.down.tipo}{self.down.id}", Corriente(),
-                self.up.down_used - 1, self.down.up_used - 1)
+                ind_up, ind_down)
 
-        self.parent().dirty[self.parent().idTab] = True
-        self.parent().saveControl()
+        self.markModified()
         self.update()
         self.obj.setSelected(True)
 
@@ -528,7 +776,8 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
 
     def readFromJSON(self, data):
         """Read scene object from project file"""
-        self.objects = deepcopy(GraphicsScene.objects)
+        self.objects = {"txt": [], "square": [], "ellipse": [], "stream": {},
+                        "in": {}, "out": {}, "equip": {}}
 
         for text in data["PFD"]["txt"].values():
             txt = text["txt"]
@@ -634,14 +883,20 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
         for idx, obj in data["PFD"]["in"].items():
             idx = int(idx)
             s = EquipmentItem("in", None)
+            s.id = idx
             x = obj["x"]
             y = obj["y"]
             pos = QtCore.QPointF(x, y)
             s.setPos(pos)
 
             angle_in[idx] = obj["angle"]
-            down = [self.objects["stream"][obj["down_id"]]]
-            s.down = down
+            down_id = obj["down_id"]
+            if down_id is None:
+                s.down = []
+                s.down_used = 0
+            else:
+                s.down = [self.objects["stream"][down_id]]
+                s.down_used = len(s.down)
             self.objects["in"][idx] = s
             self.addItem(s)
 
@@ -649,14 +904,20 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
         for idx, obj in data["PFD"]["out"].items():
             idx = int(idx)
             s = EquipmentItem("out", None)
+            s.id = idx
             x = obj["x"]
             y = obj["y"]
             pos = QtCore.QPointF(x, y)
             s.setPos(pos)
 
             angle_out[idx] = obj["angle"]
-            up = [self.objects["stream"][obj["up_id"]]]
-            s.up = up
+            up_id = obj["up_id"]
+            if up_id is None:
+                s.up = []
+                s.up_used = 0
+            else:
+                s.up = [self.objects["stream"][up_id]]
+                s.up_used = len(s.up)
             self.objects["out"][idx] = s
             self.addItem(s)
 
@@ -677,8 +938,10 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
             angle_equip[idx] = obj["angle"]
             up = [self.objects["stream"][i] for i in obj["up_id"]]
             s.up = up
+            s.up_used = len(up)
             down = [self.objects["stream"][i] for i in obj["down_id"]]
             s.down = down
+            s.down_used = len(down)
 
             self.objects["equip"][idx] = s
             self.addItem(s)
@@ -692,10 +955,27 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
             visible = obj["label_visible"]
             s.idLabel.setVisible(visible)
 
+        def resolve(tipo, i, idx):
+            if tipo == "i" and i not in self.objects["in"]:
+                candidates = [
+                    key for key, obj in self.objects["in"].items()
+                    if obj.down and obj.down[0].id == idx]
+                if len(candidates) == 1:
+                    i = candidates[0]
+            elif tipo == "o" and i not in self.objects["out"]:
+                candidates = [
+                    key for key, obj in self.objects["out"].items()
+                    if obj.up and obj.up[0].id == idx]
+                if len(candidates) == 1:
+                    i = candidates[0]
+            return i
+
         for idx in id_stream:
             tipo, i = up_stream[idx]
+            i = resolve(tipo, i, idx)
             self.objects["stream"][idx].up = self.getObject(tipo, i)
             tipo, i = down_stream[idx]
+            i = resolve(tipo, i, idx)
             self.objects["stream"][idx].down = self.getObject(tipo, i)
             self.objects["stream"][idx].redraw()
 
@@ -705,6 +985,18 @@ class GraphicsScene(QtWidgets.QGraphicsScene):
             self.objects["out"][idx].rotate(angle)
         for idx, angle in angle_equip.items():
             self.objects["equip"][idx].rotate(angle)
+
+        if self.objects["stream"]:
+            StreamItem.id = max(StreamItem.id, max(self.objects["stream"]))
+        if self.objects["equip"]:
+            EquipmentItem.id = max(
+                EquipmentItem.id, max(self.objects["equip"]))
+        if self.objects["in"]:
+            EquipmentItem.id_in = max(
+                EquipmentItem.id_in, max(self.objects["in"]))
+        if self.objects["out"]:
+            EquipmentItem.id_out = max(
+                EquipmentItem.id_out, max(self.objects["out"]))
 
     def writeToJSON(self, data):
         """Save json format to write to file"""
@@ -877,6 +1169,7 @@ class GeometricItem(QtWidgets.QAbstractGraphicsShapeItem):
         if dialog.exec():
             pen = dialog.pen()
             self.setPen(pen)
+            self.scene().markModified()
 
     def contextMenu(self):
         """Define context menu of object"""
@@ -994,6 +1287,7 @@ class TextItem(QtWidgets.QGraphicsTextItem):
         dialog = TextItemDlg(self.toHtml())
         if dialog.exec():
             self.setHtml(dialog.editor.text)
+            self.scene().markModified()
 
     def contextMenu(self):
         """Define context menu of item"""
@@ -1143,6 +1437,118 @@ class GraphicsEntity(QtCore.QObject):
                 print(ruta, "is xls")
 
 
+class PortItem(QtWidgets.QGraphicsEllipseItem):
+    """Interactive equipment connection port"""
+
+    def __init__(self, equipment, kind, direction, parent=None):
+        super().__init__(parent)
+        self.equipment = equipment
+        self.kind = kind
+        self.direction = direction
+        self._base_pen = None
+        self._base_brush = None
+        self.setAcceptHoverEvents(True)
+        self.setCursor(QtCore.Qt.CursorShape.CrossCursor)
+        self.setZValue(10)
+
+    def setHighlighted(self, highlighted):
+        """Highlight the port while it is a valid drop target"""
+        if highlighted:
+            if self._base_pen is None:
+                self._base_pen = QtGui.QPen(self.pen())
+                self._base_brush = QtGui.QBrush(self.brush())
+            pen = QtGui.QPen(self._base_pen)
+            pen.setWidthF(3)
+            pen.setColor(QtGui.QColor("#00a0ff"))
+            self.setPen(pen)
+            self.setBrush(QtGui.QColor("#00a0ff"))
+        elif self._base_pen is not None:
+            self.setPen(self._base_pen)
+            self.setBrush(self._base_brush)
+
+    def mousePressEvent(self, event):
+        """Start a connection drag from an output port"""
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            if self.scene().addObj and self.scene().addType == "stream":
+                scene = self.scene()
+                if len(scene.Pos) == 0:
+                    if self.kind != "output":
+                        event.accept()
+                        return
+                    scene.up = self.equipment
+                else:
+                    if self.kind != "input":
+                        event.accept()
+                        return
+                    scene.down = self.equipment
+                scene.Pos.append(
+                    self.equipment.mapToScene(self.rect().center()))
+                scene.points.append(self)
+                event.accept()
+                return
+            if self.scene().startConnectionDrag(self, event):
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Update the temporary connection line"""
+        if self.scene().connection is not None:
+            self.scene().updateConnectionDrag(event)
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Finish the connection drag"""
+        if self.scene().connection is not None:
+            self.scene().finishConnectionDrag(event)
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
+
+
+class StreamHandle(QtWidgets.QGraphicsEllipseItem):
+    """Draggable endpoint handle for an existing stream"""
+
+    def __init__(self, stream, endpoint, parent=None):
+        super().__init__(-5, -5, 10, 10,
+                         parent if parent is not None else stream)
+        self.stream = stream
+        self.endpoint = endpoint
+        self.setPen(QtGui.QPen(QtGui.QColor("#8a5a00")))
+        self.setBrush(QtGui.QColor("#ffb000"))
+        self.setZValue(20)
+        self.setCursor(QtCore.Qt.CursorShape.CrossCursor)
+        self.setVisible(False)
+        self.setAcceptHoverEvents(True)
+
+    def mousePressEvent(self, event):
+        """Start reconnecting this stream endpoint"""
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            if self.scene().startReconnectDrag(
+                    self.stream, self.endpoint, event):
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Update the temporary reconnection line"""
+        if self.scene().connection is not None:
+            self.scene().updateConnectionDrag(event)
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Finish reconnecting this stream endpoint"""
+        if self.scene().connection is not None:
+            self.scene().finishConnectionDrag(event)
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
+
+
 class StreamItem(QtWidgets.QGraphicsPathItem, GeometricItem, GraphicsEntity):
     """Class to plot a mass stream"""
     up = None
@@ -1169,6 +1575,33 @@ class StreamItem(QtWidgets.QGraphicsPathItem, GeometricItem, GraphicsEntity):
         self.idLabel.setZValue(2)
         self.setAcceptHoverEvents(True)
         self.tr = partial(translate, "StreamItem")
+        self.entrada = QtCore.QPointF(0, 0)
+        self.salida = QtCore.QPointF(0, 0)
+        self.Ang_entrada = 0
+        self.Ang_salida = 180
+        self.entrada_port = None
+        self.salida_port = None
+        self.inputHandle = StreamHandle(self, "input")
+        self.outputHandle = StreamHandle(self, "output")
+
+    def itemChange(self, key, value):
+        """Show endpoint handles when the stream is selected"""
+        if key == QtWidgets.QGraphicsItem.GraphicsItemChange.\
+                ItemSelectedHasChanged:
+            self.inputHandle.setVisible(bool(value))
+            self.outputHandle.setVisible(bool(value))
+        elif key == QtWidgets.QGraphicsItem.GraphicsItemChange.\
+                ItemSceneHasChanged:
+            for handle in (self.inputHandle, self.outputHandle):
+                if value is None:
+                    if handle.scene() is not None:
+                        handle.scene().removeItem(handle)
+                else:
+                    if handle.parentItem() is not None:
+                        handle.setParentItem(None)
+                    if handle.scene() is None:
+                        value.addItem(handle)
+        return super().itemChange(key, value)
 
     @property
     def corriente(self):
@@ -1182,6 +1615,8 @@ class StreamItem(QtWidgets.QGraphicsPathItem, GeometricItem, GraphicsEntity):
 
     def setCorriente(self, corriente):
         """Set Corriente instance"""
+        if corriente is None:
+            return
         self.scene().project.setStream(self.id, corriente)
         kwargs = {"entrada": corriente}
         if isinstance(self.scene().project.getDownToStream(self.id), flux.Mixer):
@@ -1198,6 +1633,7 @@ class StreamItem(QtWidgets.QGraphicsPathItem, GeometricItem, GraphicsEntity):
         else:
             pen.setColor(QtGui.QColor("red"))
         self.setPen(pen)
+        self.scene().markModified()
 
     def mouseDoubleClickEvent(self, event=None):
         """Show Corriente dialog when double click object"""
@@ -1288,11 +1724,49 @@ class StreamItem(QtWidgets.QGraphicsPathItem, GeometricItem, GraphicsEntity):
             self.format)
         return contextMenu
 
+    def _selectPort(self, equipment, streams, ports, current, stored):
+        """Select the port used by this stream, allowing shared ports"""
+        if stored in ports:
+            return stored
+        if not ports:
+            return None
+        try:
+            index = streams.index(self)
+        except ValueError:
+            index = -1
+        if 0 <= index < len(ports):
+            return ports[index]
+        if current is None:
+            return ports[0]
+        return min(ports, key=lambda port: (
+            equipment.mapToScene(port.rect().center()) - current
+            ).manhattanLength())
+
+    def _updateEndpoints(self):
+        """Update stream endpoints from the connected equipment ports"""
+        if self.up is not None and self in self.up.down:
+            port = self._selectPort(
+                self.up, self.up.down, self.up.output,
+                getattr(self, "entrada", None), self.entrada_port)
+            if port is not None:
+                self.entrada_port = port
+                self.entrada = self.up.mapToScene(
+                    port.rect().center())
+        if self.down is not None and self in self.down.up:
+            port = self._selectPort(
+                self.down, self.down.up, self.down.input,
+                getattr(self, "salida", None), self.salida_port)
+            if port is not None:
+                self.salida_port = port
+                self.salida = self.down.mapToScene(
+                    port.rect().center())
+
     def redraw(self, entrada=None, salida=None):
         """Recalcule the stream path in screen"""
-        if entrada:
+        self._updateEndpoints()
+        if entrada is not None:
             self.entrada = entrada
-        if salida:
+        if salida is not None:
             self.salida = salida
 
         max_height = max(self.up.boundingRect().height(),
@@ -1366,6 +1840,8 @@ class StreamItem(QtWidgets.QGraphicsPathItem, GeometricItem, GraphicsEntity):
         qp.lineTo(self.salida)
         self.prepareGeometryChange()
         self.setPath(qp)
+        self.inputHandle.setPos(self.entrada)
+        self.outputHandle.setPos(self.salida)
         if abs(self.entrada.y() - self.salida.y()) <= 30:
             self.idLabel.setPos(x_mean, max(self.entrada.y(), self.salida.y()))
         else:
@@ -1384,6 +1860,7 @@ class StreamItem(QtWidgets.QGraphicsPathItem, GeometricItem, GraphicsEntity):
     def toggleLabel(self):
         """Toggle label visibility"""
         self.idLabel.setVisible(not self.idLabel.isVisible())
+        self.scene().markModified()
 
     def solidFit(self):
         """Show a dialog to fit solid particle size distribution"""
@@ -1461,11 +1938,10 @@ class EquipmentItem(QtSvgWidgets.QGraphicsSvgItem, GraphicsEntity):
         self.input = []
         if inpt:
             for entrada in inpt:
-                obj = QtWidgets.QGraphicsEllipseItem(self)
+                obj = PortItem(self, "input", int(entrada[2]), self)
                 obj.setRect(entrada[0] * self.boundingRect().width() - 5,
                             entrada[1] * self.boundingRect().height() - 5,
                             10, 10)
-                obj.direction = int(entrada[2])
                 obj.setPen(QtGui.QColor(255, 255, 255))
                 obj.setBrush(QtGui.QColor(
                     Preferences.get("PFD", 'Color_Entrada')))
@@ -1473,11 +1949,10 @@ class EquipmentItem(QtSvgWidgets.QGraphicsSvgItem, GraphicsEntity):
         self.output = []
         if output:
             for salida in output:
-                obj = QtWidgets.QGraphicsEllipseItem(self)
+                obj = PortItem(self, "output", int(salida[2]), self)
                 obj.setRect(salida[0] * self.boundingRect().width() - 5,
                             salida[1] * self.boundingRect().height() - 5,
                             10, 10)
-                obj.direction = int(salida[2])
                 obj.setPen(QtGui.QColor(255, 255, 255))
                 obj.setBrush(QtGui.QColor(
                     Preferences.get("PFD", 'Color_Salida')))
@@ -1519,7 +1994,9 @@ class EquipmentItem(QtSvgWidgets.QGraphicsSvgItem, GraphicsEntity):
                 self.scene().project.setItem(self.id, dialog.Equipment)
                 # self.up[0].setCorriente(dialog.Equipment.entrada)
                 for i, corriente in enumerate(dialog.Equipment.salida):
-                    self.down[i].setCorriente(corriente)
+                    if corriente is not None and i < len(self.down):
+                        self.down[i].setCorriente(corriente)
+                self.scene().markModified()
 
         else:
             if self.output:
@@ -1534,28 +2011,33 @@ class EquipmentItem(QtSvgWidgets.QGraphicsSvgItem, GraphicsEntity):
             if self.scene().addType == "stream":
                 if len(self.scene().Pos) == 0:
                     punto = self.output
-                    self.scene().up = self
                     x = self.down_used
+                    self.scene().up = self
                 else:
                     punto = self.input
-                    self.scene().down = self
                     x = self.up_used
+                    self.scene().down = self
+                if not punto:
+                    return
+                if x < len(punto):
+                    port = punto[x]
+                else:
+                    port = min(punto, key=lambda p: (
+                        p.rect().center() - event.pos()).manhattanLength())
                 self.scene().Pos.append(
-                    self.mapToScene(punto[x].rect().center()))
-                self.scene().points.append(punto[x])
+                    self.mapToScene(port.rect().center()))
+                self.scene().points.append(port)
             else:
                 self.scene().Pos.append(event.pos())
 
     def mouseMoveEvent(self, event=None):
         """Move object in scene and redraw the streams associated to it"""
         if event:
-            QtWidgets.QGraphicsPixmapItem.mouseMoveEvent(self, event)
-        for i, corriente in enumerate(self.up):
-            corriente.redraw(
-                salida=self.mapToScene(self.input[i].rect().center()))
-        for i, corriente in enumerate(self.down):
-            corriente.redraw(
-                entrada=self.mapToScene(self.output[i].rect().center()))
+            QtSvgWidgets.QGraphicsSvgItem.mouseMoveEvent(self, event)
+        for corriente in self.up:
+            corriente.redraw()
+        for corriente in self.down:
+            corriente.redraw()
 
     def showInput(self, boolean):
         """Set visibility of input/output point"""
@@ -1565,28 +2047,30 @@ class EquipmentItem(QtSvgWidgets.QGraphicsSvgItem, GraphicsEntity):
             salida.setVisible(boolean)
 
     def hoverEnterEvent(self, event):
-        """Do actions when mouse hover over the object, show input/output point
-        when it's waiting user interaction or popup info in other case"""
+        """Show ports and the entity popup when hovering an item"""
+        self.showInput(True)
+        if self.scene().connection is not None:
+            return
         if self.scene().addObj and self.scene().addType == "stream":
-            self.showInput(True)
+            return
+        if self.dialogoId is not None:
+            self.scene().popup.populate(self.equipment, self.id, Preferences)
         else:
-            if self.dialogoId is not None:
-                self.scene().popup.populate(self.equipment, self.id, Preferences)
+            if self.output:
+                self.scene().popup.populate(
+                    self.down[0].corriente, self.down[0].id, Preferences)
             else:
-                if self.output:
-                    self.scene().popup.populate(
-                        self.down[0].corriente, self.down[0].id, Preferences)
-                else:
-                    self.scene().popup.populate(
-                        self.up[0].corriente, self.up[0].id, Preferences)
-            point = event.scenePos()
-            self.scene().popup.show()
-            self.scene().popup.move(int(point.x()), int(point.y()))
-            self.scene().popup.graphicsProxyWidget().resize(0, 0)
+                self.scene().popup.populate(
+                    self.up[0].corriente, self.up[0].id, Preferences)
+        point = event.scenePos()
+        self.scene().popup.show()
+        self.scene().popup.move(int(point.x()), int(point.y()))
+        self.scene().popup.graphicsProxyWidget().resize(0, 0)
 
     def hoverLeaveEvent(self, event):
         """Hide object shown at hoverEnterEvent"""
-        self.showInput(False)
+        if self.scene().connection is None:
+            self.showInput(False)
         self.scene().popup.hide()
 
     def hoverMoveEvent(self, event):
@@ -1628,6 +2112,9 @@ class EquipmentItem(QtSvgWidgets.QGraphicsSvgItem, GraphicsEntity):
                 mainwindow.dirty[mainwindow.idTab] = True
                 mainwindow.activeControl(True)
                 mainwindow.tabModified(mainwindow.idTab)
+        elif self.scene() and key == \
+                QtWidgets.QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
+            self.mouseMoveEvent()
         return QtWidgets.QGraphicsItem.itemChange(self, key, value)
 
     def contextMenu(self):
@@ -1714,6 +2201,7 @@ class EquipmentItem(QtSvgWidgets.QGraphicsSvgItem, GraphicsEntity):
     def toggleLabel(self):
         """Toggle label visibility"""
         self.idLabel.setVisible(not self.idLabel.isVisible())
+        self.scene().markModified()
 
     def rotate(self, angle):
         """Rotate equipment image"""
@@ -1721,17 +2209,26 @@ class EquipmentItem(QtSvgWidgets.QGraphicsSvgItem, GraphicsEntity):
         transform = self.transform()
         transform.rotate(angle)
         self.setTransform(transform)
+        for port in self.input + self.output:
+            port.direction = (port.direction + angle) % 360
+        for corriente in self.up:
+            port = corriente._selectPort(
+                self, self.up, self.input,
+                getattr(corriente, "salida", None),
+                corriente.salida_port)
+            if port is not None:
+                corriente.salida_port = port
+                corriente.Ang_salida = port.direction
+        for corriente in self.down:
+            port = corriente._selectPort(
+                self, self.down, self.output,
+                getattr(corriente, "entrada", None),
+                corriente.entrada_port)
+            if port is not None:
+                corriente.entrada_port = port
+                corriente.Ang_entrada = port.direction
         self.mouseMoveEvent()
-        for i, entrada in enumerate(self.up):
-            new_angle = (self.input[i].direction + angle) % 360
-            self.input[i].direction = new_angle
-            entrada.Ang_salida = new_angle
-            entrada.redraw()
-        for i, salida in enumerate(self.down):
-            new_angle = (self.output[i].direction + angle) % 360
-            self.output[i].direction = new_angle
-            salida.Ang_entrada = new_angle
-            salida.redraw()
+        self.scene().markModified()
 
 
 class SelectStreamProject(QtWidgets.QDialog):
