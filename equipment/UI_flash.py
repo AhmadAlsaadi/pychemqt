@@ -182,6 +182,9 @@ class UI_equipment (UI_equip):
         self.addSalida(self.tr("Liquid"))
 
         if equipment:
+            if getattr(equipment, "_state_incomplete", False):
+                equipment.calculo()
+                equipment._state_incomplete = False
             self.setEquipment(equipment)
 
     def flashChanged(self, index, update=True):

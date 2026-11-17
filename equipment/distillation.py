@@ -503,6 +503,9 @@ class Flash(equipment):
         """Write instance parameter to file"""
         state["Tout"] = self.Tout
         state["Pout"] = self.Pout
+        state["DeltaP"] = self.DeltaP
+        state["xout"] = self.xout
+        state["Q"] = self.Q
         state["VaporMolarFlow"] = self.VaporMolarFlow
         state["VaporMassFlow"] = self.VaporMassFlow
         state["VaporVolFlow"] = self.VaporVolFlow
@@ -522,6 +525,11 @@ class Flash(equipment):
         """Load instance parameter from saved file"""
         self.Tout = unidades.Temperature(state["Tout"])
         self.Pout = unidades.Pressure(state["Pout"])
+        self._state_incomplete = any(
+            key not in state for key in ("DeltaP", "xout", "Q"))
+        self.DeltaP = unidades.DeltaP(state.get("DeltaP", 0))
+        self.xout = unidades.Dimensionless(state.get("xout", 0))
+        self.Q = unidades.Power(state.get("Q", 0))
         self.VaporMolarFlow = unidades.MolarFlow(state["VaporMolarFlow"])
         self.VaporMassFlow = unidades.MassFlow(
             state.get("VaporMassFlow", 0))

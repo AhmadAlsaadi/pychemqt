@@ -118,6 +118,32 @@ class TestFlash(TestCase):
         self.assertAlmostEqual(float(adiabatic.Q), 0)
         self.assertLess(float(adiabatic.Tout), float(self.feed.T)+1)
 
+    def test_state_roundtrip_includes_flash_results(self):
+        flash = Flash(entrada=self.feed, flash=2, Pout=5e5, xout=0.5)
+        state = {}
+        flash.writeStatetoJSON(state)
+        for key in ("DeltaP", "xout", "Q"):
+            self.assertIn(key, state)
+
+        loaded = Flash()
+        loaded.readStatefromJSON(state)
+        self.assertFalse(loaded._state_incomplete)
+        self.assertAlmostEqual(float(loaded.DeltaP), float(flash.DeltaP))
+        self.assertAlmostEqual(float(loaded.xout), float(flash.xout))
+        self.assertAlmostEqual(float(loaded.Q), float(flash.Q))
+
+    def test_legacy_state_is_marked_incomplete(self):
+        flash = Flash(entrada=self.feed, flash=2, Pout=5e5, xout=0.5)
+        state = {}
+        flash.writeStatetoJSON(state)
+        for key in ("DeltaP", "xout", "Q"):
+            state.pop(key)
+
+        loaded = Flash()
+        loaded.readStatefromJSON(state)
+        self.assertTrue(loaded._state_incomplete)
+        self.assertEqual(float(loaded.DeltaP), 0)
+
 
 def load_tests(loader, tests, ignore):
     suite = TestSuite()
