@@ -218,6 +218,28 @@ class Pump(equipment):
                                   "undefined out pressure condition")
                     self.status = 0
 
+    def cleanOldValues(self, **kwargs):
+        """Clean incompatible output pressure definitions"""
+        if kwargs.get("Pout", 0):
+            self.kwargs["deltaP"] = 0
+            self.kwargs["Carga"] = 0
+        elif kwargs.get("deltaP", 0):
+            self.kwargs["Pout"] = 0
+            self.kwargs["Carga"] = 0
+        elif kwargs.get("Carga", 0):
+            self.kwargs["Pout"] = 0
+            self.kwargs["deltaP"] = 0
+        elif "Pout" in kwargs:
+            self.kwargs["deltaP"] = 0
+            self.kwargs["Carga"] = 0
+        elif "deltaP" in kwargs:
+            self.kwargs["Pout"] = 0
+            self.kwargs["Carga"] = 0
+        elif "Carga" in kwargs:
+            self.kwargs["Pout"] = 0
+            self.kwargs["deltaP"] = 0
+        self.kwargs.update(kwargs)
+
     def calculo(self):
         entrada = self.kwargs["entrada"]
         self.rendimientoCalculado = Dimensionless(self.kwargs["rendimiento"])

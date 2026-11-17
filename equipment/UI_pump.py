@@ -59,6 +59,13 @@ class UI_equipment(UI_equip):
         self.Carga = Entrada_con_unidades(Length, "Head")
         self.Carga.valueChanged.connect(partial(self.cambiar_data, "Carga"))
         lyt.addWidget(self.Carga, 3, 2)
+        for key, widget in self._pump_widgets().items():
+            widget.entrada.editingFinished.disconnect(
+                widget.entrada_editingFinished)
+            widget.entrada.editingFinished.connect(
+                partial(self.pump_editingFinished, key, widget))
+            widget.botonClear.clicked.connect(
+                partial(self.clearPumpValue, key))
         lyt.addItem(QtWidgets.QSpacerItem(
             10, 10, QtWidgets.QSizePolicy.Policy.Fixed,
             QtWidgets.QSizePolicy.Policy.Fixed), 4, 1, 1, 2)
@@ -214,16 +221,76 @@ class UI_equipment(UI_equip):
         if equipment:
             self.setEquipment(equipment)
 
-    def cambiar_data(self, parametro, valor):
-        if parametro == "Pout":
-            self.Carga.clear()
-            self.deltaP.clear()
-        elif parametro == "deltaP":
-            self.Pout.clear()
-            self.Carga.clear()
+    def _pump_widgets(self):
+        """Return the widgets that define the pump pressure specification"""
+        return {key: getattr(self, key)
+                for key in ("Pout", "deltaP", "Carga")}
+
+    def _pump_spec(self):
+        """Return the pressure variable currently specified"""
+        for key in ("Pout", "deltaP", "Carga"):
+            if self.Equipment.kwargs[key]:
+                return key
+        return None
+
+    def _set_pump_readonly(self, spec):
+        """Set the specified field editable and calculated fields read-only"""
+        for key, widget in self._pump_widgets().items():
+            widget.setReadOnly(spec is not None and key != spec)
+
+    def _clear_pump_fields(self, exclude=None):
+        """Clear pump pressure fields, optionally keeping one untouched"""
+        for key, widget in self._pump_widgets().items():
+            if key != exclude:
+                widget.clear()
+
+    def pump_editingFinished(self, parametro, widget):
+        """Handle clearing a pump pressure field without raising an error"""
+        if widget.entrada.text().strip():
+            widget.entrada_editingFinished()
+        elif self._pump_spec() == parametro:
+            self.cambiar_data(parametro, 0)
+
+    def clearPumpValue(self, parametro):
+        """Reset the pressure specification after using the clear button"""
+        if self._pump_spec() == parametro:
+            self.cambiar_data(parametro, 0)
+
+    def rellenar(self):
+        """Fill calculated pump pressure fields and set read-only state"""
+        super().rellenar()
+        spec = self._pump_spec()
+        self._set_pump_readonly(spec)
+        if spec is None:
+            self._clear_pump_fields()
+            return
+
+        widgets = self._pump_widgets()
+        if self.Equipment.status in (1, 3):
+            calculated = {
+                "Pout": self.Equipment.PoutCalculada,
+                "deltaP": self.Equipment.deltaP,
+                "Carga": self.Equipment.headCalculada}
+            for key, widget in widgets.items():
+                if key == spec:
+                    widget.setValue(self.Equipment.kwargs[key])
+                else:
+                    widget.setValue(calculated[key])
         else:
-            self.Pout.clear()
-            self.deltaP.clear()
+            for key, widget in widgets.items():
+                if key == spec:
+                    widget.setValue(self.Equipment.kwargs[key])
+                else:
+                    widget.clear()
+
+    def cambiar_data(self, parametro, valor):
+        if parametro in ("Pout", "deltaP", "Carga"):
+            if valor:
+                self._clear_pump_fields(exclude=parametro)
+                self._set_pump_readonly(parametro)
+            else:
+                self._clear_pump_fields()
+                self._set_pump_readonly(None)
         self.changeParams(parametro, valor)
 
     def bomba_currentIndexChanged(self, int):
