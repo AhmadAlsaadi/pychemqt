@@ -1127,7 +1127,7 @@ class UI_pychemqt(QtWidgets.QMainWindow):
             settings.setValue("MainWindow/State",
                               QtCore.QVariant(self.saveState()))
             self.close()
-        else:
+        elif event is not None and event is not False:
             event.ignore()
 
     # Menus configuration
@@ -1304,97 +1304,99 @@ class UI_pychemqt(QtWidgets.QMainWindow):
 
     def fileSave(self, indice=None):
         """Save project to file"""
-        if indice is None:
+        if indice is None or indice is False:
             indice = self.idTab
 
         if not self.filename[indice]:
-            self.fileSaveAs()
+            return self.fileSaveAs(indice)
+
+        data = {}
+        self.getScene(indice).project.writeToJSON(data)
+
+        PFD = {}
+        projectWidget = self.centralWidget().widget(indice)
+        win = projectWidget.subWindowList()[0]
+
+        PFD["minimized"] = win.isMinimized()
+        PFD["maximized"] = win.isMaximized()
+        if win.isMinimized():
+            win.showNormal()
+            PFD["x"] = win.pos().x()
+            PFD["y"] = win.pos().y()
+            PFD["height"] = win.size().height()
+            PFD["width"] = win.size().width()
+            win.showMinimized()
+        elif win.isMaximized():
+            win.showNormal()
+            PFD["x"] = win.pos().x()
+            PFD["y"] = win.pos().y()
+            PFD["height"] = win.size().height()
+            PFD["width"] = win.size().width()
+            win.showMaximized()
         else:
-            with open(self.filename[indice], "w") as file:
-                data = {}
-                self.getScene(indice).project.writeToJSON(data)
+            PFD["x"] = win.pos().x()
+            PFD["y"] = win.pos().y()
+            PFD["height"] = win.size().height()
+            PFD["width"] = win.size().width()
 
-                PFD = {}
-                win = self.centralWidget().currentWidget().subWindowList()[0]
+        self.getScene(indice).writeToJSON(PFD)
+        data["PFD"] = PFD
 
-                PFD["minimized"] = win.isMinimized()
-                PFD["maximized"] = win.isMaximized()
-                if win.isMinimized():
-                    win.showNormal()
-                    PFD["x"] = win.pos().x()
-                    PFD["y"] = win.pos().y()
-                    PFD["height"] = win.size().height()
-                    PFD["width"] = win.size().width()
-                    win.showMinimized()
-                elif win.isMaximized():
-                    win.showNormal()
-                    PFD["x"] = win.pos().x()
-                    PFD["y"] = win.pos().y()
-                    PFD["height"] = win.size().height()
-                    PFD["width"] = win.size().width()
-                    win.showMaximized()
-                else:
-                    PFD["x"] = win.pos().x()
-                    PFD["y"] = win.pos().y()
-                    PFD["height"] = win.size().height()
-                    PFD["width"] = win.size().width()
+        other = {}
+        ventanas = projectWidget.subWindowList()
+        for ind, win in enumerate(ventanas[1:]):
+            ventana = {}
+            ventana["class"] = win.widget().__class__.__name__
+            ventana["minimized"] = win.isMinimized()
+            ventana["maximized"] = win.isMaximized()
+            if win.isMinimized():
+                win.showNormal()
+                ventana["x"] = win.pos().x()
+                ventana["y"] = win.pos().y()
+                ventana["height"] = win.size().height()
+                ventana["width"] = win.size().width()
+                win.showMinimized()
+            elif win.isMaximized():
+                win.showNormal()
+                ventana["x"] = win.pos().x()
+                ventana["y"] = win.pos().y()
+                ventana["height"] = win.size().height()
+                ventana["width"] = win.size().width()
+                win.showMaximized()
+            else:
+                ventana["x"] = win.pos().x()
+                ventana["y"] = win.pos().y()
+                ventana["height"] = win.size().height()
+                ventana["width"] = win.size().width()
 
-                self.currentScene.writeToJSON(PFD)
-                data["PFD"] = PFD
+            widget = {}
+            win.widget().writeToJSON(widget)
+            ventana["window"] = widget
+            other[ind] = ventana
 
-                other = {}
-                ventanas = self.centralWidget().currentWidget().subWindowList()
-                for ind, win in enumerate(ventanas[1:]):
-                    ventana = {}
-                    ventana["class"] = win.widget().__class__.__name__
-                    ventana["minimized"] = win.isMinimized()
-                    ventana["maximized"] = win.isMaximized()
-                    if win.isMinimized():
-                        win.showNormal()
-                        ventana["x"] = win.pos().x()
-                        ventana["y"] = win.pos().y()
-                        ventana["height"] = win.size().height()
-                        ventana["width"] = win.size().width()
-                        win.showMinimized()
-                    elif win.isMaximized():
-                        win.showNormal()
-                        ventana["x"] = win.pos().x()
-                        ventana["y"] = win.pos().y()
-                        ventana["height"] = win.size().height()
-                        ventana["width"] = win.size().width()
-                        win.showMaximized()
-                    else:
-                        ventana["x"] = win.pos().x()
-                        ventana["y"] = win.pos().y()
-                        ventana["height"] = win.size().height()
-                        ventana["width"] = win.size().width()
+            # Add dependences from other windows
+            if widget.get("external_dependences", None):
+                data["external_dependences"].add(
+                    widget["external_dependences"])
 
-                    widget = {}
-                    win.widget().writeToJSON(widget)
-                    ventana["window"] = widget
-                    other[ind] = ventana
+        data["other"] = other
 
-                    # Add dependences from other windows
-                    if widget.get("external_dependences", None):
-                        data["external_dependences"].add(
-                            widget["external_dependences"])
+        # python set are not serializable so convert to list
+        data["external_dependences"] = list(
+            data["external_dependences"])
 
-                data["other"] = other
+        json_data = json.dumps(data, indent=4)
+        with open(self.filename[indice], "w") as file:
+            file.write(json_data)
 
-                # python set are not serializable so convert to list
-                data["external_dependences"] = list(
-                    data["external_dependences"])
-
-                json.dump(data, file, indent=4)
-
-            self.dirty[self.idTab] = False
-            self.updateStatus(self.tr("Saved as")+" "+self.filename[indice])
-            self.dirty[indice] = False
-            self.saveControl()
+        self.dirty[indice] = False
+        self.tabModified(indice)
+        self.updateStatus(self.tr("Saved as")+" "+self.filename[indice])
+        self.saveControl()
 
     def fileSaveAs(self, indice=None):
         """Save current project with a new name"""
-        if indice is None:
+        if indice is None or indice is False:
             indice = self.idTab
         folder = self.filename[indice] if self.filename[indice] else "."
         fname = QtWidgets.QFileDialog.getSaveFileName(
@@ -1404,13 +1406,15 @@ class UI_pychemqt(QtWidgets.QMainWindow):
 
         if fname[0]:
             name = fname[0]
-            if name.split(".")[-1] != "pcq":
+            if not name.lower().endswith(".pcq"):
                 name += ".pcq"
             self.addRecentFile(name)
             self.filename[indice] = name
             self.fileSave(indice)
             self.centralWidget().setTabText(
                 indice, os.path.splitext(os.path.basename(name))[0])
+            return True
+        return False
 
     def fileSaveAll(self):
         """Save all open project with changes"""
@@ -1578,6 +1582,8 @@ class UI_pychemqt(QtWidgets.QMainWindow):
 
     def fileClose(self, index):
         """Actions to be done when close a project in mainwindow"""
+        if index is None or index is False:
+            index = self.idTab
         if okToContinue(self, self.dirty[index], self.fileSave, index):
             self.updateStatus(self.tr( "Closed") + " " + self.currentFilename)
             self.centralWidget().removeTab(index)
@@ -1591,6 +1597,8 @@ class UI_pychemqt(QtWidgets.QMainWindow):
                 self.list.clear()
                 flujo.StreamItem.id = 0
                 flujo.EquipmentItem.id = 0
+                flujo.EquipmentItem.id_in = 0
+                flujo.EquipmentItem.id_out = 0
             self.clearWindow()
 
     # Configuration
@@ -1741,6 +1749,7 @@ class UI_pychemqt(QtWidgets.QMainWindow):
             self.centralWidget().currentWidget().subWindowList()[0].widget()
             self.list.updateList(self.currentScene.objects)
             self.changeStatusThermo(self.config[self.idTab])
+            self.saveControl()
         else:
             self.list.clear()
 

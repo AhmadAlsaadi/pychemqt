@@ -317,6 +317,11 @@ class UI_equip(QtWidgets.QDialog):
         widget.Changed.connect(partial(self.changeParams, key))
         self.Entrada.addTab(widget, title)
 
+    def accept(self):
+        """Wait for the pending equipment calculation before closing"""
+        self.evaluate.wait()
+        super().accept()
+
     def ignorar(self, bool):
         """Ignore the equipment"""
         if bool:

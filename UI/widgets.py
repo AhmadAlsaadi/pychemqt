@@ -46,6 +46,7 @@ Module to define common graphics widget
 
 
 from configparser import ConfigParser
+import logging
 from math import pi
 import os
 import sys
@@ -315,6 +316,9 @@ class Entrada_con_unidades(QtWidgets.QWidget):
         """Clear value"""
         self.entrada.setText("")
         self.value = None
+        if hasattr(self, "botonClear"):
+            self.botonClear.setVisible(False)
+            self.entrada.setTextMargins(0, 0, 0, 0)
 
     def setResaltado(self, boolean):
         """Set resalted background color for input widget"""
@@ -335,6 +339,14 @@ class Entrada_con_unidades(QtWidgets.QWidget):
         """Set read only state for widget"""
         self.entrada.setReadOnly(readOnly)
         self.readOnly = readOnly
+        if hasattr(self, "botonClear"):
+            if readOnly:
+                self.botonClear.setVisible(False)
+                self.entrada.setTextMargins(0, 0, 0, 0)
+            elif self.entrada.underMouse():
+                visible = bool(self.value)
+                self.botonClear.setVisible(visible)
+                self.entrada.setTextMargins(0, 0, 10 if visible else 0, 0)
         self.setResaltado(self.resaltado)
 
     def setNotReadOnly(self, editable):
@@ -350,7 +362,7 @@ class Entrada_con_unidades(QtWidgets.QWidget):
         if value is None:
             value = 0
         self.value = self.unidad(value)
-        if value or self.showNull:
+        if value or self.showNull or self.readOnly:
             if self.magnitud:
                 self.entrada.setText(
                     self.value.format(magnitud=self.UIconfig)+self.suffix)
@@ -361,6 +373,13 @@ class Entrada_con_unidades(QtWidgets.QWidget):
             else:
                 self.entrada.setText(str(self.value)+self.suffix)
             self.setToolTip()
+        else:
+            self.entrada.clear()
+        if hasattr(self, "botonClear") and not self.readOnly and \
+                self.entrada.underMouse():
+            visible = bool(self.value)
+            self.botonClear.setVisible(visible)
+            self.entrada.setTextMargins(0, 0, 10 if visible else 0, 0)
 
     def setFrame(self, frame):
         """Set frame of widget"""
@@ -1519,8 +1538,15 @@ def okToContinue(parent, dirty, func, *parameters):
         return True
 
     if dialog == QtWidgets.QMessageBox.StandardButton.Yes:
-        func(*parameters)
-        return True
+        try:
+            result = func(*parameters)
+        except Exception as error:
+            logging.exception("Error saving project")
+            QtWidgets.QMessageBox.critical(
+                parent, translate("widgets", "Error saving project"),
+                str(error))
+            return False
+        return result is not False
 
     return None
 

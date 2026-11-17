@@ -217,6 +217,11 @@ class Corriente_Dialog(QtWidgets.QDialog, Ui_corriente):
         self.setWindowTitle(self.tr("Edit stream properties"))
         self.layout().addLayout(layout)
 
+    def accept(self):
+        """Wait for the pending stream calculation before closing"""
+        self.evaluate.wait()
+        super().accept()
+
 
 class StreamDefinition(QtWidgets.QWidget):
     """Widget for stream definition as standard P,T,x composition input"""
@@ -324,7 +329,10 @@ class StreamDefinition(QtWidgets.QWidget):
             self.setResaltado(stream, "T")
             self.P.setValue(stream.P)
             self.setResaltado(stream, "P")
-            self.x.setValue(stream.x)
+            if stream.kwargs["x"] is not None:
+                self.x.setValue(stream.x)
+            else:
+                self.x.clear()
             self.setResaltado(stream, "x")
             self.caudalMasico.setValue(stream.caudalmasico)
             self.setResaltado(stream, "caudalMasico")
