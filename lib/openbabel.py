@@ -155,7 +155,7 @@ class ConfBabel(QtWidgets.QDialog):
         self.checkAsym.stateChanged.connect(self.updateImage)
         layout.addWidget(self.checkAsym, 9, 1, 1, 2)
 
-        if os.environ["openbabel"] == "False":
+        if os.environ["openbabel"] != "True":
             self.example = QtWidgets.QLabel(
                 self.tr("Openbabel library don´t found"))
             self.example.setStyleSheet("color: red")
@@ -192,7 +192,7 @@ class ConfBabel(QtWidgets.QDialog):
 
     def updateImage(self, config=None):
         """Update image shown when changing some of the parameters"""
-        if os.environ["openbabel"] == "False":
+        if os.environ["openbabel"] != "True":
             return
 
         if not isinstance(config, ConfigParser):
