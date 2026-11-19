@@ -151,7 +151,7 @@ def Preferences():
 
     # TooltipEntity
     conf.add_section("TooltipEntity")
-    conf.set("TooltipEntity", "Corriente", "0,1")
+    conf.set("TooltipEntity", "Corriente", "0,1,4")
     for equipo in equipos:
         conf.set("TooltipEntity", equipo, "0,1")
 
